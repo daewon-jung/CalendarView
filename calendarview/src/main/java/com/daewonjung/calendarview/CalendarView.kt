@@ -6,7 +6,9 @@ import android.support.v4.content.ContextCompat
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
 import android.util.AttributeSet
+import android.util.Log
 import android.widget.FrameLayout
+import android.widget.TextView
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -17,7 +19,7 @@ class CalendarView(
     defStyleAttr: Int = 0
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
-    private val recyclerView: RecyclerView = RecyclerView(context, attrs, defStyleAttr)
+    private val recyclerView: RecyclerView = RecyclerView(context)
     private val calendarAdapter: CalendarViewAdapter
     var dateSelectListener: DateSelectListener? = null
 
@@ -57,6 +59,7 @@ class CalendarView(
             selectLimitDay,
             viewAttrs
         )
+
         recyclerView.layoutManager = LinearLayoutManager(context)
         recyclerView.adapter = calendarAdapter
         addView(recyclerView)
@@ -76,16 +79,16 @@ class CalendarView(
             val currentYear = calendar.get(Calendar.YEAR)
             val currentMonth = calendar.get(Calendar.MONTH)
 
-            recyclerView.scrollToPosition(
-                (currentYear -
-                        (startDate?.year ?: 0)) * Constants.MONTHS_IN_YEAR -
-                        (startDate?.month ?: 0) + currentMonth
-            )
-        } else if (calendar.timeInMillis > endDate?.createCalendar()?.timeInMillis ?: Long.MAX_VALUE) {
-            recyclerView.scrollToPosition(
-                (endDate?.year
-                        ?: 0) * Constants.MONTHS_IN_YEAR + (endDate?.month ?: 0)
-            )
+            val initPosition = if (startDate == null) {
+                currentYear * MONTHS_IN_YEAR + currentMonth
+            } else {
+                (currentYear - startDate.year) * MONTHS_IN_YEAR -
+                        startDate.month + currentMonth
+            }
+
+            recyclerView.scrollToPosition(initPosition)
+        } else if (end != null && curr.after(end)) {
+            recyclerView.scrollToPosition(endDate.year * MONTHS_IN_YEAR + endDate.month)
         }
     }
 
@@ -132,7 +135,7 @@ class CalendarView(
         )
 
         val disableDayColor = typedArray.getColor(
-            R.styleable.CalendarView_colorDisableDay,
+            R.styleable.CalendarView_colorDisabledDay,
             ContextCompat.getColor(context, R.color.disable_day)
         )
         val selectedDayBgColor = typedArray.getColor(
@@ -193,7 +196,7 @@ class CalendarView(
             dayTextColor = dayTextColor,
             saturdayTextColor = saturdayTextColor,
             sundayTextColor = sundayTextColor,
-            disableDayColor = disableDayColor,
+            disabledDayColor = disableDayColor,
             selectedDayBgColor = selectedDayBgColor,
             selectedDayTextColor = selectedDayTextColor,
             monthHeight = monthHeight,
@@ -214,7 +217,7 @@ class CalendarView(
     }
 
     fun setStartDate(strDate: String) {
-        parseStringDate(strDate)?.let { calendarAdapter?.setStartDate(it) }
+        parseStringDate(strDate)?.let { calendarAdapter.setStartDate(it) }
     }
 
     fun setEndDate(endDate: CalendarDate) {
@@ -222,53 +225,14 @@ class CalendarView(
     }
 
     fun setEndDate(strDate: String) {
-        parseStringDate(strDate)?.let { calendarAdapter?.setEndDate(it) }
+        parseStringDate(strDate)?.let { calendarAdapter.setEndDate(it) }
     }
 
     fun getSelectedDays(): SelectedDates? {
-        return calendarAdapter?.selectedDates
+        return calendarAdapter.selectedDates
     }
 
-//    private fun parseStringDate(strDate: String?): CalendarDate? {
-//        if (strDate == null) {
-//            return null
-//        }
-//
-//        val splitStartDate = strDate.split("-")
-//
-//        if (splitStartDate.size != 3
-//                || splitStartDate[0].toInt() < 1
-//                || splitStartDate[1].toInt() !in 1..12) {
-//            return null
-//        }
-//
-//        val year = splitStartDate[0].toInt()
-//        val month = splitStartDate[1].toInt()
-//        val day = splitStartDate[2].toInt()
-//
-//        val lastDay = Utils.getDaysInMonth(year, month - 1)
-//        if (day !in 1..lastDay) {
-//            return null
-//        }
-//
-//        return CalendarDate(year, month - 1, day)
-//    }
-
-//    private fun getDateAttrs(typedArray: TypedArray) : DateAttrs {
-//        val startDate = typedArray.getString(R.styleable.CalendarView_startDate)
-//        val endDate = typedArray.getString(R.styleable.CalendarView_endDate)
-//
-//        val startCalendarDate = parseStringDate(startDate)
-//        val endCalendarDate = parseStringDate(endDate)
-//
-//        return if (startCalendarDate == null || endCalendarDate == null) {
-//            DateAttrs(startCalendarDate, endCalendarDate)
-//        } else {
-//            if (startCalendarDate.calendar.timeInMillis <= endCalendarDate.calendar.timeInMillis) {
-//                DateAttrs(parseStringDate(startDate), parseStringDate(endDate))
-//            } else {
-//                DateAttrs(null, null)
-//            }
-//        }
-//    }
+    companion object {
+        const val MONTHS_IN_YEAR = 12
+    }
 }

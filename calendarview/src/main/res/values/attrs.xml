@@ -11,7 +11,7 @@
 
         <attr name="colorSelectedDayBackground" format="color"/>
         <attr name="colorSelectedDayText" format="color"/>
-        <attr name="colorDisableDay" format="color"/>
+        <attr name="colorDisabledDay" format="color"/>
 
         <attr name="monthHeight" format="dimension" />
         <attr name="dayOfWeekHeight" format="dimension" />

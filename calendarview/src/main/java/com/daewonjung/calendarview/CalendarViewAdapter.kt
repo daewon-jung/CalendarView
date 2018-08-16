@@ -4,7 +4,6 @@ import android.content.Context
 import android.support.v7.widget.RecyclerView
 import android.view.ViewGroup
 
-
 class CalendarViewAdapter(
     private val context: Context,
     private val dateSelectListener: DateSelectListener?,
@@ -17,17 +16,20 @@ class CalendarViewAdapter(
     var selectedDates = SelectedDates(null, null)
 
 
-    override fun onCreateViewHolder(viewGroup: ViewGroup, i: Int): ViewHolder =
-        ViewHolder.create(context, viewAttrs, this)
+    override fun onCreateViewHolder(viewGroup: ViewGroup, i: Int): ViewHolder {
+        return ViewHolder.create(context, viewAttrs, this)
+    }
 
     override fun onBindViewHolder(viewHolder: ViewHolder, position: Int) {
         val startYear: Int = startDate?.year ?: 0
         val startMonth: Int = startDate?.month ?: 0
 
         val year: Int =
-            position / Constants.MONTHS_IN_YEAR + startYear + (startMonth + position % Constants.MONTHS_IN_YEAR) / Constants.MONTHS_IN_YEAR
+            position / CalendarView.MONTHS_IN_YEAR +
+            startYear +
+            (startMonth + position % CalendarView.MONTHS_IN_YEAR) / CalendarView.MONTHS_IN_YEAR
         val month: Int =
-            (startMonth + position % Constants.MONTHS_IN_YEAR) % Constants.MONTHS_IN_YEAR
+            (startMonth + position % CalendarView.MONTHS_IN_YEAR) % CalendarView.MONTHS_IN_YEAR
 
         viewHolder.bind(year, month, selectedDates, startDate, endDate, selectLimitDay)
     }
@@ -35,15 +37,21 @@ class CalendarViewAdapter(
     override fun getItemCount(): Int {
         return when {
             endDate == null -> Int.MAX_VALUE
-            startDate == null -> (endDate?.year?.times(Constants.MONTHS_IN_YEAR)
-                    ?: Int.MAX_VALUE) + (endDate?.month?.plus(1) ?: 0)
-            else -> ((endDate?.year?.minus(startDate?.year ?: 0))?.times(Constants.MONTHS_IN_YEAR)
-                    ?: Int.MAX_VALUE) + (endDate?.month?.minus(startDate?.month ?: 0)?.plus(1) ?: 0)
-        }
-    }
+            startDate == null -> {
+                val endYear = endDate?.year
+                val endMonth = endDate?.month
 
-    override fun getItemId(position: Int): Long {
-        return position.toLong()
+                (endYear?.times(CalendarView.MONTHS_IN_YEAR) ?: Int.MAX_VALUE) +
+                        (endMonth?.plus(1) ?: 0)
+            }
+            else -> {
+                val diffYear = endDate?.year?.minus(startDate?.year ?: 0)
+                val diffMonth = endDate?.month?.minus(startDate?.month ?: 0)
+
+                (diffYear?.times(CalendarView.MONTHS_IN_YEAR) ?: Int.MAX_VALUE) +
+                        (diffMonth?.plus(1) ?: 0)
+            }
+        }
     }
 
     override fun onDateClicked(calendarDate: CalendarDate) {
@@ -98,7 +106,9 @@ class CalendarViewAdapter(
             prevSelectedDate.start == null && prevSelectedDate.end == null ->
                 prevSelectedDate.copy(start = calendarDate)
             prevSelectedDate.start != null && prevSelectedDate.end == null ->
-                if (prevSelectedDate.start.createCalendar().timeInMillis > calendarDate.createCalendar().timeInMillis) {
+                if (prevSelectedDate.start.createCalendar().timeInMillis >
+                    calendarDate.createCalendar().timeInMillis
+                ) {
                     prevSelectedDate.copy(start = calendarDate, end = prevSelectedDate.start)
                 } else {
                     prevSelectedDate.copy(end = calendarDate)
@@ -108,3 +118,4 @@ class CalendarViewAdapter(
             else -> prevSelectedDate
         }
 }
+

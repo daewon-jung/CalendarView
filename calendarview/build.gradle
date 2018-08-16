@@ -1,12 +1,10 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin: 'com.github.dcendents.android-maven'
-group='com.github.daewon-jung'
+group = 'com.github.daewon-jung'
 
 android {
     compileSdkVersion 27
-
-
 
     defaultConfig {
         minSdkVersion 15
@@ -41,14 +39,3 @@ dependencies {
 repositories {
     mavenCentral()
 }
-
-//publish {
-//    userOrg = 'DaewonJung'
-//    groupId = 'com.daewonjung.calendarview'
-//    artifactId = 'CalendarView'
-//    publishVersion = '0.0.1'
-//    desc = 'https://github.com/Daewon-Jung/Calendarview'
-//    website = 'https://github.com/Daewon-Jung/Calendarview'
-//    issueTracker = "https://github.com/Daewon-Jung/Calendarview/issues"
-//    repository = "https://github.com/Daewon-Jung/Calendarview.git"
-//}

@@ -10,7 +10,7 @@ data class ViewAttrs(
 
     val selectedDayBgColor: Int = 0,
     val selectedDayTextColor: Int = 0,
-    val disableDayColor: Int = 0,
+    val disabledDayColor: Int = 0,
 
     val monthHeight: Int = 0,
     val dayOfWeekHeight: Int = 0,

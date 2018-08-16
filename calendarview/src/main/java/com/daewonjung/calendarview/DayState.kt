@@ -6,6 +6,9 @@ enum class DayState {
     END,
     INCLUDE,
     ONE_DAY,
-    NONE,
+    NORMAL,
+    TODAY,
+    SATURDAY,
+    SUNDAY,
     DISABLE
 }

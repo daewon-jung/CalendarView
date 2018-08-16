@@ -27,10 +27,104 @@ class MonthView(
 
     private var viewWidth: Int = 0
 
-    private val monthTitlePaint: Paint
-    private lateinit var dayOfWeekPaint: Paint
-    private lateinit var dayPaint: Paint
-    private lateinit var selectedCirclePaint: Paint
+    private val monthTitlePaint by lazy {
+        Paint().apply {
+            isFakeBoldText = false
+            isAntiAlias = true
+            textSize = viewAttrs.monthTextSize.toFloat()
+            color = viewAttrs.monthTextColor
+            style = Style.FILL
+            textAlign = Align.CENTER
+        }
+    }
+
+    private val dayOfWeekPaint by lazy {
+        Paint().apply {
+            isFakeBoldText = false
+            isAntiAlias = true
+            textSize = viewAttrs.dayOfWeekTextSize.toFloat()
+            color = viewAttrs.dayOfWeekTextColor
+            style = Style.FILL
+            textAlign = Align.CENTER
+        }
+    }
+
+    private val normalDayTextPaint by lazy {
+        Paint().apply {
+            isFakeBoldText = false
+            isAntiAlias = true
+            textSize = viewAttrs.dayTextSize.toFloat()
+            color = viewAttrs.dayTextColor
+            style = Style.FILL
+            textAlign = Align.CENTER
+        }
+    }
+
+    private val todayTextPaint by lazy {
+        Paint().apply {
+            isFakeBoldText = false
+            isAntiAlias = true
+            textSize = viewAttrs.dayTextSize.toFloat()
+            color = viewAttrs.todayTextColor
+            style = Style.FILL
+            textAlign = Align.CENTER
+            typeface = Typeface.defaultFromStyle(Typeface.BOLD)
+        }
+    }
+
+    private val saturdayTextPaint by lazy {
+        Paint().apply {
+            isFakeBoldText = false
+            isAntiAlias = true
+            textSize = viewAttrs.dayTextSize.toFloat()
+            color = viewAttrs.saturdayTextColor
+            style = Style.FILL
+            textAlign = Align.CENTER
+        }
+    }
+
+    private val sundayTextPaint by lazy {
+        Paint().apply {
+            isFakeBoldText = false
+            isAntiAlias = true
+            textSize = viewAttrs.dayTextSize.toFloat()
+            color = viewAttrs.sundayTextColor
+            style = Style.FILL
+            textAlign = Align.CENTER
+        }
+    }
+
+    private val disabledDayTextPaint by lazy {
+        Paint().apply {
+            isFakeBoldText = false
+            isAntiAlias = true
+            textSize = viewAttrs.dayTextSize.toFloat()
+            color = viewAttrs.disabledDayColor
+            style = Style.FILL
+            textAlign = Align.CENTER
+        }
+    }
+
+    private val selectedDayTextPaint by lazy {
+        Paint().apply {
+            isFakeBoldText = false
+            isAntiAlias = true
+            textSize = viewAttrs.dayTextSize.toFloat()
+            color = viewAttrs.selectedDayTextColor
+            style = Style.FILL
+            textAlign = Align.CENTER
+        }
+    }
+
+    private val selectedCirclePaint by lazy {
+        Paint().apply {
+            isFakeBoldText = false
+            isAntiAlias = true
+            color = viewAttrs.selectedDayBgColor
+            style = Style.FILL
+            textAlign = Align.CENTER
+        }
+    }
 
     private var weekStart = 1
     private var numCells = 0
@@ -51,57 +145,32 @@ class MonthView(
         set(Calendar.MILLISECOND, 0)
     }
 
-    private lateinit var selectedDates: SelectedDates
-
+    private var selectedDates: SelectedDates? = null
     private var numRows = 0
-
     private var onDateClickListener: OnDateClickListener? = null
 
-
     init {
-
-
         isClickable = true
-
-        monthTitlePaint = Paint()
-        monthTitlePaint.isFakeBoldText = false
-        monthTitlePaint.isAntiAlias = true
-        monthTitlePaint.textSize = viewAttrs.monthTextSize.toFloat()
-        monthTitlePaint.color = viewAttrs.monthTextColor
-        monthTitlePaint.style = Style.FILL
-        monthTitlePaint.textAlign = Align.CENTER
-
-        dayOfWeekPaint = Paint()
-        dayOfWeekPaint.isFakeBoldText = false
-        dayOfWeekPaint.isAntiAlias = true
-        dayOfWeekPaint.textSize = viewAttrs.dayOfWeekTextSize.toFloat()
-        dayOfWeekPaint.color = viewAttrs.dayOfWeekTextColor
-        dayOfWeekPaint.style = Style.FILL
-        dayOfWeekPaint.textAlign = Align.CENTER
-
-        dayPaint = Paint()
-        dayPaint.isFakeBoldText = false
-        dayPaint.isAntiAlias = true
-        dayPaint.textSize = viewAttrs.dayTextSize.toFloat()
-        dayPaint.color = viewAttrs.dayTextColor
-        dayPaint.style = Style.FILL
-        dayPaint.textAlign = Align.CENTER
-
-        selectedCirclePaint = Paint()
-        selectedCirclePaint.isFakeBoldText = false
-        selectedCirclePaint.isAntiAlias = true
-        selectedCirclePaint.color = viewAttrs.selectedDayBgColor
-        selectedCirclePaint.style = Style.FILL
-        selectedCirclePaint.textAlign = Align.CENTER
+        isSaveEnabled = false
     }
 
     private fun calculateNumRows(numCells: Int): Int {
         val offset = getDayOffset()
-        return (offset + numCells) / Constants.DAYS_IN_WEEK + if ((offset + numCells) % Constants.DAYS_IN_WEEK > 0) 1 else 0
+
+        return (offset + numCells) / DAYS_IN_WEEK +
+                if ((offset + numCells) % DAYS_IN_WEEK > 0)
+                    1
+                else
+                    0
     }
 
     private fun getDayOffset(): Int {
-        return (if (dayOfWeekOffset < weekStart) dayOfWeekOffset + Constants.DAYS_IN_WEEK else dayOfWeekOffset) - weekStart
+        val offset = if (dayOfWeekOffset < weekStart)
+            dayOfWeekOffset + DAYS_IN_WEEK
+        else
+            dayOfWeekOffset
+
+        return offset - weekStart
     }
 
     private fun getTextBounds(text: String, paint: Paint): Rect {
@@ -116,18 +185,18 @@ class MonthView(
         val monthBounds = getTextBounds(monthText, monthTitlePaint)
 
         val dayOfWeekText =
-            DateFormatSymbols().shortWeekdays[Calendar.getInstance().get(Calendar.DAY_OF_WEEK)].toUpperCase(
-                Locale.getDefault()
-            )
+            DateFormatSymbols().shortWeekdays[Calendar.getInstance().get(Calendar.DAY_OF_WEEK)]
+                .toUpperCase(Locale.getDefault())
         val dayOfWeekBounds = getTextBounds(dayOfWeekText, dayOfWeekPaint)
 
 //        가운데 정렬
 //        val x = (viewWidth - viewAttrs.padding * 2) / 2
-        val dayOfWeekDivision = (viewWidth - viewAttrs.padding * 2) / (Constants.DAYS_IN_WEEK * 2)
+        val dayOfWeekDivision = (viewWidth - viewAttrs.padding * 2) / (DAYS_IN_WEEK * 2)
         val x = (monthBounds.right - monthBounds.left) / 2 + viewAttrs.padding +
                 dayOfWeekDivision - (dayOfWeekBounds.right - dayOfWeekBounds.left) / 2
-        val y =
-            viewAttrs.monthSpacing + (viewAttrs.monthHeight / 2) + (monthBounds.bottom - monthBounds.top) / 2
+        val y = viewAttrs.monthSpacing +
+                (viewAttrs.monthHeight / 2) +
+                (monthBounds.bottom - monthBounds.top) / 2
 
         canvas.drawText(
             monthText,
@@ -143,30 +212,38 @@ class MonthView(
     }
 
     private fun drawDayOfWeek(canvas: Canvas) {
-        val dayOfWeekDivision = (viewWidth - viewAttrs.padding * 2) / (Constants.DAYS_IN_WEEK * 2)
+        val dayOfWeekDivision = (viewWidth - viewAttrs.padding * 2) / (DAYS_IN_WEEK * 2)
 
         val dateFormatSymbols = DateFormatSymbols()
         val dayOfWeekCalendar = Calendar.getInstance()
 
-        for (i in 0 until Constants.DAYS_IN_WEEK) {
-            val dayOfWeekIndex = (i + weekStart) % Constants.DAYS_IN_WEEK
+        for (i in 0 until DAYS_IN_WEEK) {
+            val dayOfWeekIndex = (i + weekStart) % DAYS_IN_WEEK
 
             dayOfWeekCalendar.set(Calendar.DAY_OF_WEEK, dayOfWeekIndex)
 
             val dayOfWeekText = dateFormatSymbols
-                .shortWeekdays[dayOfWeekCalendar.get(Calendar.DAY_OF_WEEK)].toUpperCase(Locale.getDefault())
+                .shortWeekdays[dayOfWeekCalendar.get(Calendar.DAY_OF_WEEK)]
+                .toUpperCase(Locale.getDefault())
             val bounds = getTextBounds(dayOfWeekText, dayOfWeekPaint)
 
             val x = (2 * i + 1) * dayOfWeekDivision + viewAttrs.padding
-            val y =
-                viewAttrs.monthSpacing + viewAttrs.monthHeight + (viewAttrs.dayOfWeekHeight / 2) + (bounds.bottom - bounds.top) / 2
+            val y = viewAttrs.monthSpacing +
+                    viewAttrs.monthHeight +
+                    (viewAttrs.dayOfWeekHeight / 2) +
+                    (bounds.bottom - bounds.top) / 2
 
-            drawWeekendDayColor(dayOfWeekPaint, i)
+            val textPaint: Paint = when (getWeekendDayState(i)) {
+                DayState.NORMAL -> normalDayTextPaint
+                DayState.SATURDAY -> saturdayTextPaint
+                DayState.SUNDAY -> sundayTextPaint
+                else -> normalDayTextPaint
+            }
 
             canvas.drawText(
                 dayOfWeekText,
                 x.toFloat(), y.toFloat(),
-                dayOfWeekPaint
+                textPaint
             )
         }
     }
@@ -188,7 +265,7 @@ class MonthView(
             year,
             month,
             day
-        ).timeInMillis == selectedDates.start?.createCalendar()?.timeInMillis ?: -1
+        ).timeInMillis == selectedDates?.start?.createCalendar()?.timeInMillis ?: -1
     }
 
     private fun isSelectedEndDay(year: Int, month: Int, day: Int): Boolean {
@@ -196,11 +273,11 @@ class MonthView(
             year,
             month,
             day
-        ).timeInMillis == selectedDates.end?.createCalendar()?.timeInMillis ?: -1
+        ).timeInMillis == selectedDates?.end?.createCalendar()?.timeInMillis ?: -1
     }
 
     private fun isIncludeSelectedDay(year: Int, month: Int, day: Int): Boolean {
-        if (selectedDates.start == null || selectedDates.end == null) {
+        if (selectedDates?.start == null || selectedDates?.end == null) {
             return false
         }
 
@@ -212,12 +289,12 @@ class MonthView(
                 year,
                 month,
                 day
-            ).timeInMillis > selectedDates.start?.createCalendar()?.timeInMillis ?: 0)
+            ).timeInMillis > selectedDates?.start?.createCalendar()?.timeInMillis ?: 0)
             && (getCalendarWithoutTime(
                 year,
                 month,
                 day
-            ).timeInMillis < selectedDates.end?.createCalendar()?.timeInMillis ?: Long.MAX_VALUE)
+            ).timeInMillis < selectedDates?.end?.createCalendar()?.timeInMillis ?: Long.MAX_VALUE)
         ) {
             return true
         }
@@ -225,20 +302,20 @@ class MonthView(
         return false
     }
 
-    private fun getDayState(year: Int, month: Int, day: Int): DayState {
-        if (selectedDates.start == null && selectedDates.end == null) {
+    private fun getDayState(year: Int, month: Int, day: Int, dayOffset: Int): DayState {
+        if (selectedDates?.start == null && selectedDates?.end == null) {
             return if (!isEnableDay(year, month, day)) {
                 DayState.DISABLE
             } else {
-                DayState.NONE
+                getSubDayState(year, month, day, dayOffset)
             }
-        } else if (selectedDates.end == null) {
+        } else if (selectedDates?.end == null) {
             return if (isSelectedStartDay(year, month, day)) {
                 DayState.FIRST_TOUCH
             } else if (!isEnableDay(year, month, day)) {
                 DayState.DISABLE
             } else {
-                DayState.NONE
+                getSubDayState(year, month, day, dayOffset)
             }
         } else {
             return if (isSelectedStartDay(year, month, day) && isSelectedEndDay(year, month, day)) {
@@ -252,20 +329,118 @@ class MonthView(
             } else if (!isEnableDay(year, month, day)) {
                 DayState.DISABLE
             } else {
-                DayState.NONE
+                getSubDayState(year, month, day, dayOffset)
             }
         }
     }
 
+    private fun drawRectBackground(
+        canvas: Canvas,
+        dayState: DayState,
+        x: Int,
+        y: Int,
+        dayDivision: Int,
+        dayOffset: Int,
+        dayOfWeekBounds: Rect
+    ) {
+        when (dayState) {
+            DayState.START -> {
+                drawDayStateRect(
+                    left = x,
+                    top = y - viewAttrs.selectedCircleSize,
+                    right = x + dayDivision,
+                    bottom = y + viewAttrs.selectedCircleSize,
+                    paint = selectedCirclePaint,
+                    canvas = canvas
+                )
+            }
+            DayState.END -> {
+                drawDayStateRect(
+                    left = x - dayDivision,
+                    top = y - viewAttrs.selectedCircleSize,
+                    right = x,
+                    bottom = y + viewAttrs.selectedCircleSize,
+                    paint = selectedCirclePaint,
+                    canvas = canvas
+                )
+            }
+            DayState.INCLUDE -> {
+                val left = when (dayOffset) {
+                    0 -> x - dayDivision + (dayOfWeekBounds.right - dayOfWeekBounds.left) / 2
+                    DAYS_IN_WEEK - 1 -> x - dayDivision
+                    else -> x - dayDivision
+                }
+                val right = when (dayOffset) {
+                    0 -> x + dayDivision
+                    DAYS_IN_WEEK - 1 ->
+                        x + dayDivision - (dayOfWeekBounds.right - dayOfWeekBounds.left) / 2
+                    else -> x + dayDivision
+                }
+                drawDayStateRect(
+                    left = left,
+                    top = y - viewAttrs.selectedCircleSize,
+                    right = right,
+                    bottom = y + viewAttrs.selectedCircleSize,
+                    paint = selectedCirclePaint,
+                    canvas = canvas
+                )
+            }
+        }
+    }
+
+    private fun drawCircleBackground(
+        canvas: Canvas,
+        dayState: DayState,
+        x: Int,
+        y: Int
+    ) {
+        when (dayState) {
+            DayState.FIRST_TOUCH,
+            DayState.START,
+            DayState.END,
+            DayState.ONE_DAY ->
+                canvas.drawCircle(
+                    x.toFloat(),
+                    y.toFloat(),
+                    viewAttrs.selectedCircleSize.toFloat(),
+                    selectedCirclePaint
+                )
+        }
+    }
+
+    private fun getDayTextPaint(dayState: DayState): Paint {
+        return when (dayState) {
+            DayState.FIRST_TOUCH,
+            DayState.START,
+            DayState.END,
+            DayState.INCLUDE,
+            DayState.ONE_DAY ->
+                selectedDayTextPaint
+            DayState.NORMAL ->
+                normalDayTextPaint
+            DayState.TODAY ->
+                todayTextPaint
+            DayState.SATURDAY ->
+                saturdayTextPaint
+            DayState.SUNDAY ->
+                sundayTextPaint
+            DayState.DISABLE ->
+                disabledDayTextPaint
+        }
+    }
+
     private fun drawDay(canvas: Canvas) {
-        var y =
-            viewAttrs.monthSpacing + viewAttrs.monthHeight + viewAttrs.dayOfWeekHeight + (viewAttrs.dayHeight / 2)
-        val dayDivision = (viewWidth - viewAttrs.padding * 2) / (Constants.DAYS_IN_WEEK * 2)
+        var y = viewAttrs.monthSpacing +
+                viewAttrs.monthHeight +
+                viewAttrs.dayOfWeekHeight +
+                (viewAttrs.dayHeight / 2)
+        val dayDivision = (viewWidth - viewAttrs.padding * 2) / (DAYS_IN_WEEK * 2)
         var dayOffset = getDayOffset()
         var day = 1
 
         val dayOfWeekText = DateFormatSymbols()
-            .shortWeekdays[Calendar.getInstance().get(Calendar.DAY_OF_WEEK)].toUpperCase(Locale.getDefault())
+            .shortWeekdays[Calendar.getInstance().get(Calendar.DAY_OF_WEEK)]
+            .toUpperCase(Locale.getDefault())
         val dayOfWeekBounds = Rect()
         dayOfWeekPaint.getTextBounds(dayOfWeekText, 0, dayOfWeekText.length, dayOfWeekBounds)
 
@@ -273,103 +448,24 @@ class MonthView(
             val x = dayDivision * (1 + dayOffset * 2) + viewAttrs.padding
 
             val textPaint: Paint
-            val dayState = getDayState(year, month, day)
-//            drawBackground(canvas, dayState)
-//            drawText()
-            when (getDayState(year, month, day)) {
-                DayState.FIRST_TOUCH -> {
-                    dayPaint.color = viewAttrs.selectedDayTextColor
-                    canvas.drawCircle(
-                        x.toFloat(),
-                        y.toFloat(),
-                        viewAttrs.selectedCircleSize.toFloat(),
-                        selectedCirclePaint
-                    )
-                }
-                DayState.START -> {
-                    dayPaint.color = viewAttrs.selectedDayTextColor
-                    drawDayStateRect(
-                        left = x,
-                        top = y - viewAttrs.selectedCircleSize,
-                        right = x + dayDivision,
-                        bottom = y + viewAttrs.selectedCircleSize,
-                        paint = selectedCirclePaint,
-                        canvas = canvas
-                    )
-                    canvas.drawCircle(
-                        x.toFloat(),
-                        y.toFloat(),
-                        viewAttrs.selectedCircleSize.toFloat(),
-                        selectedCirclePaint
-                    )
-                }
-                DayState.END -> {
-                    dayPaint.color = viewAttrs.selectedDayTextColor
-                    drawDayStateRect(
-                        left = x - dayDivision,
-                        top = y - viewAttrs.selectedCircleSize,
-                        right = x,
-                        bottom = y + viewAttrs.selectedCircleSize,
-                        paint = selectedCirclePaint,
-                        canvas = canvas
-                    )
-                    canvas.drawCircle(
-                        x.toFloat(),
-                        y.toFloat(),
-                        viewAttrs.selectedCircleSize.toFloat(),
-                        selectedCirclePaint
-                    )
-                }
-                DayState.INCLUDE -> {
-                    dayPaint.color = viewAttrs.selectedDayTextColor
-                    val left = when (dayOffset) {
-                        0 -> x - dayDivision + (dayOfWeekBounds.right - dayOfWeekBounds.left) / 2
-                        Constants.DAYS_IN_WEEK - 1 -> x - dayDivision
-                        else -> x - dayDivision
-                    }
-                    val right = when (dayOffset) {
-                        0 -> x + dayDivision
-                        Constants.DAYS_IN_WEEK - 1 -> x + dayDivision - (dayOfWeekBounds.right - dayOfWeekBounds.left) / 2
-                        else -> x + dayDivision
-                    }
-                    drawDayStateRect(
-                        left = left,
-                        top = y - viewAttrs.selectedCircleSize,
-                        right = right,
-                        bottom = y + viewAttrs.selectedCircleSize,
-                        paint = selectedCirclePaint,
-                        canvas = canvas
-                    )
-                }
-                DayState.ONE_DAY -> {
-                    dayPaint.color = viewAttrs.selectedDayTextColor
-                    canvas.drawCircle(
-                        x.toFloat(),
-                        y.toFloat(),
-                        viewAttrs.selectedCircleSize.toFloat(),
-                        selectedCirclePaint
-                    )
-                }
-                DayState.DISABLE -> {
-                    drawDisableDayColor(dayPaint, year, month, day)
-                }
-                DayState.NONE -> {
-                    drawNormalDayColor(dayPaint, year, month, day, dayOffset)
-                }
-            }
+            val dayState = getDayState(year, month, day, dayOffset)
+
+            drawRectBackground(canvas, dayState, x, y, dayDivision, dayOffset, dayOfWeekBounds)
+            drawCircleBackground(canvas, dayState, x, y)
+            textPaint = getDayTextPaint(dayState)
 
             val datText = day.toString()
-            val bounds = getTextBounds(datText, dayPaint)
+            val bounds = getTextBounds(datText, textPaint)
             canvas.drawText(
                 datText,
                 x.toFloat(),
                 (y + (bounds.bottom - bounds.top) / 2).toFloat(),
-                dayPaint
+                textPaint
             )
 
             dayOffset++
 
-            if (dayOffset == Constants.DAYS_IN_WEEK) {
+            if (dayOffset == DAYS_IN_WEEK) {
                 dayOffset = 0
                 y += viewAttrs.dayHeight
             }
@@ -395,43 +491,44 @@ class MonthView(
         )
     }
 
-    private fun drawDisableDayColor(paint: Paint, year: Int, month: Int, day: Int) {
-        if (!isEnableDay(year, month, day)) {
-            paint.color = viewAttrs.disableDayColor
-        }
-    }
-
-    private fun drawNormalDayColor(paint: Paint, year: Int, month: Int, day: Int, dayOffset: Int) {
-        if (today == day
+    private fun getSubDayState(year: Int, month: Int, day: Int, dayOffset: Int): DayState {
+        return if (today == day
             && todayCalendar.get(Calendar.YEAR) == year
             && todayCalendar.get(Calendar.MONTH) == month
         ) {
-            paint.color = viewAttrs.todayTextColor
-            paint.typeface = Typeface.defaultFromStyle(Typeface.BOLD)
+            DayState.TODAY
         } else {
-            drawWeekendDayColor(paint, dayOffset)
-            paint.typeface = Typeface.defaultFromStyle(Typeface.NORMAL)
+            getWeekendDayState(dayOffset)
         }
     }
 
-    private fun drawWeekendDayColor(paint: Paint, dayOffset: Int) {
-        when (dayOffset) {
-            0 -> paint.color = viewAttrs.sundayTextColor
-            Constants.DAYS_IN_WEEK - 1 -> paint.color = viewAttrs.saturdayTextColor
-            else -> paint.color = viewAttrs.dayTextColor
+    private fun getWeekendDayState(dayOffset: Int): DayState {
+        return when (dayOffset) {
+            0 -> DayState.SUNDAY
+            DAYS_IN_WEEK - 1 -> DayState.SATURDAY
+            else -> DayState.NORMAL
         }
     }
 
     private fun isEnableDay(year: Int, month: Int, day: Int): Boolean {
-        if (startDate?.year == year && startDate?.month == month && (startDate?.day) ?: Int.MAX_VALUE > day) {
+        if (startDate?.year == year &&
+            startDate?.month == month &&
+            (startDate?.day) ?: Int.MAX_VALUE > day
+        ) {
             return false
         }
 
-        if (endDate?.year == year && endDate?.month == month && (endDate?.day) ?: Int.MAX_VALUE < day) {
+        if (endDate?.year == year &&
+            endDate?.month == month &&
+            (endDate?.day) ?: Int.MAX_VALUE < day
+        ) {
             return false
         }
 
-        if (selectLimitDay != Int.MAX_VALUE && selectedDates.start != null && selectedDates.end == null) {
+        if (selectLimitDay != Int.MAX_VALUE &&
+            selectedDates?.start != null &&
+            selectedDates?.end == null
+        ) {
             val calendar = Calendar.getInstance()
             calendar.set(year, month, day)
             calendar.set(Calendar.HOUR_OF_DAY, 0)
@@ -440,7 +537,10 @@ class MonthView(
             calendar.set(Calendar.MILLISECOND, 0)
 
             val diffDay =
-                Math.abs(selectedDates.start!!.createCalendar().timeInMillis - calendar.timeInMillis) / 1000 / 60 / 60 / 24
+                Math.abs(
+                    selectedDates?.start!!.createCalendar().timeInMillis -
+                            calendar.timeInMillis
+                ) / 1000 / 60 / 60 / 24
             return diffDay < selectLimitDay
         }
 
@@ -468,7 +568,10 @@ class MonthView(
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         setMeasuredDimension(
             View.MeasureSpec.getSize(widthMeasureSpec),
-            viewAttrs.monthSpacing + viewAttrs.monthHeight + viewAttrs.dayOfWeekHeight + viewAttrs.dayHeight * numRows
+            viewAttrs.monthSpacing +
+                    viewAttrs.monthHeight +
+                    viewAttrs.dayOfWeekHeight +
+                    viewAttrs.dayHeight * numRows
         )
     }
 
@@ -491,21 +594,33 @@ class MonthView(
         }
 
         val yDay =
-            (y - viewAttrs.monthSpacing - viewAttrs.monthHeight - viewAttrs.dayOfWeekHeight).toInt() / viewAttrs.dayHeight
+            (y - viewAttrs.monthSpacing - viewAttrs.monthHeight - viewAttrs.dayOfWeekHeight)
+                .toInt() / viewAttrs.dayHeight
         val day =
-            1 + (((x - viewAttrs.padding) * Constants.DAYS_IN_WEEK / (viewWidth - viewAttrs.padding - viewAttrs.padding)).toInt() - getDayOffset()) + yDay * Constants.DAYS_IN_WEEK
+            1 + (((x - viewAttrs.padding) * DAYS_IN_WEEK /
+                    (viewWidth - viewAttrs.padding - viewAttrs.padding))
+                .toInt() - getDayOffset()) + yDay * DAYS_IN_WEEK
 
-        return if (month > 11 || month < 0 || Utils.getDaysInMonth(
-                year,
-                month
-            ) < day || day < 1
-        ) null else day
+        val calendar = Calendar.getInstance()
+        calendar.set(year, month, 1)
+
+        return if (month > 11
+            || month < 0
+            || calendar.getActualMaximum(Calendar.DAY_OF_MONTH) < day
+            || day < 1
+        )
+            null
+        else
+            day
     }
 
     private fun onDayClick(day: Int) {
         if (isEnableDay(year, month, day)) {
             onDateClickListener?.onDateClicked(CalendarDate(year, month, day))
-        } else if (selectLimitDay != Int.MAX_VALUE && selectedDates.start != null && selectedDates.end == null) {
+        } else if (selectLimitDay != Int.MAX_VALUE &&
+            selectedDates?.start != null &&
+            selectedDates?.end == null
+        ) {
             onDateClickListener?.onInvalidDateClicked(CalendarDate(year, month, day))
         }
     }
@@ -522,9 +637,7 @@ class MonthView(
         this@MonthView.selectLimitDay = selectLimitDay
 
         val calendar = Calendar.getInstance()
-        calendar.set(Calendar.YEAR, year)
-        calendar.set(Calendar.MONTH, month)
-        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        calendar.set(year, month, 1)
         dayOfWeekOffset = calendar.get(Calendar.DAY_OF_WEEK)
 
 //        weekStart = if (params.containsKey(VIEW_PARAMS_WEEK_START)) {
@@ -533,7 +646,7 @@ class MonthView(
 //            dayOfWeekOffset
 //        }
 
-        numCells = Utils.getDaysInMonth(year, month)
+        numCells = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
         numRows = calculateNumRows(numCells)
 
         for (i in 0 until numCells) {
@@ -548,5 +661,9 @@ class MonthView(
 
     fun setOnDateClickListener(onDateClickListener: OnDateClickListener) {
         this.onDateClickListener = onDateClickListener
+    }
+
+    companion object {
+        const val DAYS_IN_WEEK = 7
     }
 }
