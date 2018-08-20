@@ -6,20 +6,17 @@ import android.support.v4.content.ContextCompat
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
 import android.util.AttributeSet
-import android.util.Log
-import android.widget.FrameLayout
-import android.widget.TextView
 import java.text.SimpleDateFormat
 import java.util.*
 
 
+@Suppress("unused")
 class CalendarView(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
-) : FrameLayout(context, attrs, defStyleAttr) {
+) : RecyclerView(context, attrs, defStyleAttr) {
 
-    private val recyclerView: RecyclerView = RecyclerView(context)
     private val calendarAdapter: CalendarViewAdapter
     var dateSelectListener: DateSelectListener? = null
 
@@ -43,6 +40,7 @@ class CalendarView(
     constructor(context: Context, attrs: AttributeSet?) : this(context, attrs, 0)
 
     init {
+
         val typedArray = context.obtainStyledAttributes(attrs, R.styleable.CalendarView)
         val startDate = parseStringDate(typedArray.getString(R.styleable.CalendarView_startDate))
         val endDate = parseStringDate(typedArray.getString(R.styleable.CalendarView_endDate))
@@ -60,9 +58,8 @@ class CalendarView(
             viewAttrs
         )
 
-        recyclerView.layoutManager = LinearLayoutManager(context)
-        recyclerView.adapter = calendarAdapter
-        addView(recyclerView)
+        layoutManager = LinearLayoutManager(context)
+        adapter = calendarAdapter
 
         scrollInitPosition(startDate, endDate)
     }
@@ -86,27 +83,30 @@ class CalendarView(
                         startDate.month + currentMonth
             }
 
-            recyclerView.scrollToPosition(initPosition)
+            scrollToPosition(initPosition)
         } else if (end != null && curr.after(end)) {
-            recyclerView.scrollToPosition(endDate.year * MONTHS_IN_YEAR + endDate.month)
+            scrollToPosition(endDate.year * MONTHS_IN_YEAR + endDate.month)
         }
     }
 
-    private fun parseStringDate(strDate: String?): CalendarDate? {
-        return try {
-            val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(strDate)
-            val calendar = Calendar.getInstance()
-            calendar.time = date
-            CalendarDate(
-                calendar.get(Calendar.YEAR),
-                calendar.get(Calendar.MONTH),
-                calendar.get(Calendar.DAY_OF_MONTH)
-            )
-        } catch (e: Exception) {
-            e.printStackTrace()
+    private fun parseStringDate(strDate: String?): CalendarDate? =
+        if (strDate?.isNotEmpty() != true) {
             null
+        } else {
+            try {
+                val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(strDate)
+                val calendar = Calendar.getInstance()
+                calendar.time = date
+                CalendarDate(
+                    calendar.get(Calendar.YEAR),
+                    calendar.get(Calendar.MONTH),
+                    calendar.get(Calendar.DAY_OF_MONTH)
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
         }
-    }
 
     private fun initViewAttrs(typedArray: TypedArray): ViewAttrs {
         val monthTextColor = typedArray.getColor(
@@ -210,6 +210,25 @@ class CalendarView(
             selectedCircleSize = selectedCircleSize,
             isCurrentDaySelected = isCurrentDaySelected
         )
+    }
+
+    override fun setAdapter(adapter: Adapter<*>?) {
+        if (adapter != null && adapter !is CalendarViewAdapter) {
+            throw UnsupportedOperationException("adapter should be CalendarViewAdapter")
+        }
+        super.setAdapter(adapter)
+    }
+
+    override fun setLayoutManager(layout: LayoutManager?) {
+        if (layout != null &&
+            (layout !is LinearLayoutManager ||
+                    layout.orientation != LinearLayoutManager.VERTICAL)
+        ) {
+            throw UnsupportedOperationException(
+                "layoutManager should be LinearLayoutManager with orientation vertical"
+            )
+        }
+        super.setLayoutManager(layout)
     }
 
     fun setStartDate(startDate: CalendarDate) {
