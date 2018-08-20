@@ -2,6 +2,8 @@ package com.daewonjung.calendarviewsample
 
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
+import android.support.v7.widget.LinearLayoutManager
+import android.util.LayoutDirection
 import android.util.Log
 import android.widget.Toast
 import com.daewonjung.calendarview.CalendarDate
@@ -33,6 +35,7 @@ class MainActivity :
         setContentView(R.layout.activity_main)
 
         calendarView.dateSelectListener = this
+        calendarView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
     }
 
     companion object {

@@ -4,14 +4,14 @@ import android.content.Context
 import android.support.v7.widget.RecyclerView
 import android.view.ViewGroup
 
-class CalendarViewAdapter(
+open class CalendarViewAdapter(
     private val context: Context,
     private val dateSelectListener: DateSelectListener?,
     private var startDate: CalendarDate?,
     private var endDate: CalendarDate?,
     private val selectLimitDay: Int,
     private val viewAttrs: ViewAttrs
-) : RecyclerView.Adapter<ViewHolder>(), MonthView.OnDateClickListener {
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>(), MonthView.OnDateClickListener {
 
     var selectedDates = SelectedDates(null, null)
 
@@ -20,18 +20,24 @@ class CalendarViewAdapter(
         return ViewHolder.create(context, viewAttrs, this)
     }
 
-    override fun onBindViewHolder(viewHolder: ViewHolder, position: Int) {
+    override fun onBindViewHolder(viewHolder: RecyclerView.ViewHolder, position: Int) {
         val startYear: Int = startDate?.year ?: 0
         val startMonth: Int = startDate?.month ?: 0
 
         val year: Int =
-            position / CalendarView.MONTHS_IN_YEAR +
-            startYear +
-            (startMonth + position % CalendarView.MONTHS_IN_YEAR) / CalendarView.MONTHS_IN_YEAR
-        val month: Int =
-            (startMonth + position % CalendarView.MONTHS_IN_YEAR) % CalendarView.MONTHS_IN_YEAR
+            (position / CalendarView.MONTHS_IN_YEAR) + startYear +
+                    ((startMonth + position % CalendarView.MONTHS_IN_YEAR) /
+                            CalendarView.MONTHS_IN_YEAR)
+        val month: Int = (startMonth + (position % CalendarView.MONTHS_IN_YEAR)) %
+                CalendarView.MONTHS_IN_YEAR
+        onBindViewHolder(
+            viewHolder,
+            MonthData(year, month, selectedDates, startDate, endDate, selectLimitDay)
+        )
+    }
 
-        viewHolder.bind(year, month, selectedDates, startDate, endDate, selectLimitDay)
+    protected open fun onBindViewHolder(holder: RecyclerView.ViewHolder, monthData: MonthData) {
+        (holder as? ViewHolder)?.bind(monthData)
     }
 
     override fun getItemCount(): Int {
@@ -117,5 +123,14 @@ class CalendarViewAdapter(
                 prevSelectedDate.copy(start = calendarDate, end = null)
             else -> prevSelectedDate
         }
+
+    data class MonthData(
+        val year: Int,
+        val month: Int,
+        val selectedDays: SelectedDates,
+        val startDate: CalendarDate?,
+        val endDate: CalendarDate?,
+        val selectLimitDay: Int
+    )
 }
 
