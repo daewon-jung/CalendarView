@@ -7,11 +7,11 @@ Download
 
 ```gradle
 repositories {
-  maven { url "https://jitpack.io" }
+    maven { url "https://jitpack.io" }
 }
 
 dependencies {
-  implementation 'com.github.daewon-jung:CalendarView:1.0.0'
+    implementation 'com.github.daewon-jung:CalendarView:1.0.1'
 }
 ```
 

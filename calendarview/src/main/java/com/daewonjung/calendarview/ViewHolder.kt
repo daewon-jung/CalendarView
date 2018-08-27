@@ -4,25 +4,14 @@ import android.content.Context
 import android.support.v7.widget.RecyclerView
 
 class ViewHolder(
-    private val monthView: MonthView,
-    onDateClickListener: MonthView.OnDateClickListener
+    private val monthView: MonthView
 ) : RecyclerView.ViewHolder(monthView) {
 
-    init {
-        monthView.setOnDateClickListener(onDateClickListener)
+    fun bind(monthData: CalendarViewAdapter.MonthData) {
+        with(monthData) {
+            monthView.setMonthParams(year, month, selectedDays, startDate, endDate, selectLimitDay)
+        }
     }
-
-    fun bind(
-        year: Int,
-        month: Int,
-        selectedDays: SelectedDates,
-        startDate: CalendarDate?,
-        endDate: CalendarDate?,
-        selectLimitDay: Int
-    ) {
-        monthView.setMonthParams(year, month, selectedDays, startDate, endDate, selectLimitDay)
-    }
-
 
     companion object {
 
@@ -30,6 +19,9 @@ class ViewHolder(
             context: Context,
             viewAttrs: ViewAttrs,
             onDateClickListener: MonthView.OnDateClickListener
-        ): ViewHolder = ViewHolder(MonthView(context, viewAttrs), onDateClickListener)
+        ): ViewHolder =
+            ViewHolder(MonthView(context, viewAttrs).apply {
+                setOnDateClickListener(onDateClickListener)
+            })
     }
 }
