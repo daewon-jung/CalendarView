@@ -36,7 +36,7 @@ Usage
 
     <attr name="colorSelectedDayBackground" format="color"/>
     <attr name="colorSelectedDayText" format="color"/>
-    <attr name="colorDisabledDay" format="color"/>
+    <attr name="colorDisabledDayText" format="color"/>
 
     <attr name="monthHeight" format="dimension" />
     <attr name="dayOfWeekHeight" format="dimension" />
@@ -46,12 +46,12 @@ Usage
     <attr name="textSizeDayOfWeek" format="dimension" />
     <attr name="textSizeDay" format="dimension"/>
 
-    <attr name="padding" format="dimension"/>
+    <attr name="sidePadding" format="dimension"/>
     <attr name="monthSpacing" format="dimension"/>
 
     <attr name="selectLimitDay" format="integer" />
     <attr name="selectedDayRadius" format="dimension" />
-    <attr name="currentDaySelected" format="boolean" />
+    <attr name="todaySelected" format="boolean" />
 
     <attr name="startDate" format="string"/>
     <attr name="endDate" format="string"/>
