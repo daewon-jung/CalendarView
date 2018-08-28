@@ -20,9 +20,8 @@ data class ViewAttrs(
     val dayOfWeekTextSize: Int = 0,
     val dayTextSize: Int = 0,
 
-    val padding: Int = 0,
+    val sidePadding: Int = 0,
     val monthSpacing: Int = 0,
 
-    val selectedCircleSize: Int = 0,
-    val isCurrentDaySelected: Boolean = true
+    val selectedCircleSize: Int = 0
 )
