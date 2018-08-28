@@ -6,6 +6,5 @@ interface DateSelectListener {
 
     fun onDateRangeSelected(start: CalendarDate, end: CalendarDate)
 
-    fun onInvalidDateSelected(year: Int, month: Int, day: Int, selectLimitDay: Int)
-
+    fun onSelectLimitDayExceed(start: CalendarDate, end: CalendarDate, selectLimitDay: Int)
 }

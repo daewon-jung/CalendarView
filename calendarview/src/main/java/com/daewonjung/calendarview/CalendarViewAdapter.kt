@@ -9,7 +9,8 @@ open class CalendarViewAdapter(
     private val dateSelectListener: DateSelectListener?,
     private var startDate: CalendarDate?,
     private var endDate: CalendarDate?,
-    private val selectLimitDay: Int,
+    private var selectLimitDay: Int?,
+    private var todaySelected: Boolean,
     private val viewAttrs: ViewAttrs
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>(), MonthView.OnDateClickListener {
 
@@ -32,7 +33,7 @@ open class CalendarViewAdapter(
                 CalendarView.MONTHS_IN_YEAR
         onBindViewHolder(
             viewHolder,
-            MonthData(year, month, selectedDates, startDate, endDate, selectLimitDay)
+            MonthData(year, month, selectedDates, startDate, endDate, selectLimitDay, todaySelected)
         )
     }
 
@@ -83,24 +84,34 @@ open class CalendarViewAdapter(
         }
     }
 
-    override fun onInvalidDateClicked(calendarDate: CalendarDate) {
-        dateSelectListener?.onInvalidDateSelected(
-            calendarDate.year,
-            calendarDate.month,
-            calendarDate.day,
-            selectLimitDay
-        )
+    override fun onSelectLimitDayExceed(
+        startDate: CalendarDate,
+        endDate: CalendarDate,
+        limit: Int
+    ) {
+        dateSelectListener?.onSelectLimitDayExceed(startDate, endDate, limit)
     }
 
-    fun setStartDate(date: CalendarDate) {
+    fun setStartDate(date: CalendarDate?) {
         this.startDate = date
         selectedDates = selectedDates.copy(start = null, end = null)
         notifyDataSetChanged()
     }
 
-    fun setEndDate(date: CalendarDate) {
+    fun setEndDate(date: CalendarDate?) {
         this.endDate = date
         selectedDates = selectedDates.copy(start = null, end = null)
+        notifyDataSetChanged()
+    }
+
+    fun setSelectLimitDay(days: Int?) {
+        this.selectLimitDay = days
+        selectedDates = selectedDates.copy(start = null, end = null)
+        notifyDataSetChanged()
+    }
+
+    fun setTodaySelected(selected: Boolean) {
+        this.todaySelected = selected
         notifyDataSetChanged()
     }
 
@@ -130,7 +141,8 @@ open class CalendarViewAdapter(
         val selectedDays: SelectedDates,
         val startDate: CalendarDate?,
         val endDate: CalendarDate?,
-        val selectLimitDay: Int
+        val selectLimitDay: Int?,
+        val todaySelected: Boolean
     )
 }
 

@@ -3,7 +3,6 @@ package com.daewonjung.calendarviewsample
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
-import android.util.LayoutDirection
 import android.util.Log
 import android.widget.Toast
 import com.daewonjung.calendarview.CalendarDate
@@ -22,7 +21,11 @@ class MainActivity :
         Log.d(TAG, "Day Range Selected : " + start.toString() + " --> " + end.toString())
     }
 
-    override fun onInvalidDateSelected(year: Int, month: Int, day: Int, selectLimitDay: Int) {
+    override fun onSelectLimitDayExceed(
+        start: CalendarDate,
+        end: CalendarDate,
+        selectLimitDay: Int
+    ) {
         Toast.makeText(
             applicationContext,
             "최대 " + selectLimitDay + "일까지 조회 가능합니다.",

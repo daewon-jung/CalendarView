@@ -9,7 +9,15 @@ class ViewHolder(
 
     fun bind(monthData: CalendarViewAdapter.MonthData) {
         with(monthData) {
-            monthView.setMonthParams(year, month, selectedDays, startDate, endDate, selectLimitDay)
+            monthView.setMonthParams(
+                year,
+                month,
+                selectedDays,
+                startDate,
+                endDate,
+                selectLimitDay,
+                todaySelected
+            )
         }
     }
 

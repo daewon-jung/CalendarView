@@ -30,8 +30,13 @@ class CalendarView(
             dateSelectListener?.onDateRangeSelected(start, end)
         }
 
-        override fun onInvalidDateSelected(year: Int, month: Int, day: Int, selectLimitDay: Int) {
-            dateSelectListener?.onInvalidDateSelected(year, month, day, selectLimitDay)
+
+        override fun onSelectLimitDayExceed(
+            start: CalendarDate,
+            end: CalendarDate,
+            selectLimitDay: Int
+        ) {
+            dateSelectListener?.onSelectLimitDayExceed(start, end, selectLimitDay)
         }
     }
 
@@ -45,7 +50,9 @@ class CalendarView(
         val startDate = parseStringDate(typedArray.getString(R.styleable.CalendarView_startDate))
         val endDate = parseStringDate(typedArray.getString(R.styleable.CalendarView_endDate))
         val selectLimitDay =
-            typedArray.getInt(R.styleable.CalendarView_selectLimitDay, Int.MAX_VALUE)
+            typedArray.getInt(R.styleable.CalendarView_selectLimitDay, 0).takeIf { it > 0 }
+        val todaySelected = typedArray.getBoolean(R.styleable.CalendarView_todaySelected, true)
+
         val viewAttrs = initViewAttrs(typedArray)
         typedArray.recycle()
 
@@ -55,6 +62,7 @@ class CalendarView(
             startDate,
             endDate,
             selectLimitDay,
+            todaySelected,
             viewAttrs
         )
 
@@ -135,7 +143,7 @@ class CalendarView(
         )
 
         val disableDayColor = typedArray.getColor(
-            R.styleable.CalendarView_colorDisabledDay,
+            R.styleable.CalendarView_colorDisabledDayText,
             ContextCompat.getColor(context, R.color.disable_day)
         )
         val selectedDayBgColor = typedArray.getColor(
@@ -147,17 +155,17 @@ class CalendarView(
             ContextCompat.getColor(context, R.color.selected_day_text)
         )
 
-        val monthHeight = typedArray.getDimensionPixelOffset(
+        val monthHeight = typedArray.getDimensionPixelSize(
             R.styleable.CalendarView_monthHeight,
-            resources.getDimensionPixelOffset(R.dimen.month_height)
+            resources.getDimensionPixelSize(R.dimen.month_height)
         )
-        val dayOfWeekHeight = typedArray.getDimensionPixelOffset(
+        val dayOfWeekHeight = typedArray.getDimensionPixelSize(
             R.styleable.CalendarView_dayOfWeekHeight,
-            resources.getDimensionPixelOffset(R.dimen.day_of_week_height)
+            resources.getDimensionPixelSize(R.dimen.day_of_week_height)
         )
-        val dayHeight = typedArray.getDimensionPixelOffset(
+        val dayHeight = typedArray.getDimensionPixelSize(
             R.styleable.CalendarView_dayHeight,
-            resources.getDimensionPixelOffset(R.dimen.day_height)
+            resources.getDimensionPixelSize(R.dimen.day_height)
         )
 
         val monthTextSize = typedArray.getDimensionPixelSize(
@@ -178,16 +186,14 @@ class CalendarView(
             resources.getDimensionPixelOffset(R.dimen.monthSpacing)
         )
         val padding = typedArray.getDimensionPixelSize(
-            R.styleable.CalendarView_padding,
-            resources.getDimensionPixelOffset(R.dimen.padding)
+            R.styleable.CalendarView_sidePadding,
+            resources.getDimensionPixelOffset(R.dimen.sidePadding)
         )
 
         val selectedCircleSize = typedArray.getDimensionPixelSize(
             R.styleable.CalendarView_selectedDayRadius,
             resources.getDimensionPixelOffset(R.dimen.selected_circle_size)
         )
-        val isCurrentDaySelected =
-            typedArray.getBoolean(R.styleable.CalendarView_currentDaySelected, true)
 
         return ViewAttrs(
             monthTextColor = monthTextColor,
@@ -206,9 +212,8 @@ class CalendarView(
             dayOfWeekTextSize = dayOfWeekTextSize,
             dayTextSize = dayTextSize,
             monthSpacing = monthSpacing,
-            padding = padding,
-            selectedCircleSize = selectedCircleSize,
-            isCurrentDaySelected = isCurrentDaySelected
+            sidePadding = padding,
+            selectedCircleSize = selectedCircleSize
         )
     }
 
@@ -231,24 +236,24 @@ class CalendarView(
         super.setLayoutManager(layout)
     }
 
-    fun setStartDate(startDate: CalendarDate) {
+    fun setStartDate(startDate: CalendarDate?) {
         calendarAdapter.setStartDate(startDate)
     }
 
-    fun setStartDate(strDate: String) {
-        parseStringDate(strDate)?.let { calendarAdapter.setStartDate(it) }
-    }
-
-    fun setEndDate(endDate: CalendarDate) {
+    fun setEndDate(endDate: CalendarDate?) {
         calendarAdapter.setEndDate(endDate)
-    }
-
-    fun setEndDate(strDate: String) {
-        parseStringDate(strDate)?.let { calendarAdapter.setEndDate(it) }
     }
 
     fun getSelectedDays(): SelectedDates? {
         return calendarAdapter.selectedDates
+    }
+
+    fun setSelectLimitDay(dayCount: Int) {
+        calendarAdapter.setSelectLimitDay(dayCount)
+    }
+
+    fun setTodaySelected(selected: Boolean) {
+        calendarAdapter.setTodaySelected(selected)
     }
 
     companion object {

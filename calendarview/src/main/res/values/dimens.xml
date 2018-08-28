@@ -9,7 +9,7 @@
     <dimen name="day_of_week_text_size">16sp</dimen>
     <dimen name="day_text_size">16sp</dimen>
 
-    <dimen name="padding">20dp</dimen>
+    <dimen name="sidePadding">20dp</dimen>
     <dimen name="monthSpacing">20dp</dimen>
 
     <dimen name="selected_circle_size">16dp</dimen>
