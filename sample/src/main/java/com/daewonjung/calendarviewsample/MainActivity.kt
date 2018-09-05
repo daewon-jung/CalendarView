@@ -13,8 +13,8 @@ class MainActivity :
     AppCompatActivity(),
     DateSelectListener {
 
-    override fun onDateSelected(year: Int, month: Int, day: Int) {
-        Log.d(TAG, "Day Selected : $year / $month / $day")
+    override fun onDateSelected(date: CalendarDate) {
+        Log.d(TAG, "Day Selected : ${date.year} / ${date.month} / ${date.day}")
     }
 
     override fun onDateRangeSelected(start: CalendarDate, end: CalendarDate) {
@@ -38,7 +38,6 @@ class MainActivity :
         setContentView(R.layout.activity_main)
 
         calendarView.dateSelectListener = this
-        calendarView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
     }
 
     companion object {

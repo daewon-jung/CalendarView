@@ -10,6 +10,7 @@ import android.graphics.Rect
 import android.graphics.Typeface
 import android.view.MotionEvent
 import android.view.View
+import com.daewonjung.calendarview.Utils.checkSelectLimitDayExceed
 import java.text.DateFormatSymbols
 import java.util.*
 
@@ -176,7 +177,7 @@ class MonthView(
 
     private fun getMonthAndYearString(year: Int, month: Int): String =
         "$year${context.getString(R.string.year)} " +
-                "${month + 1}${context.getString(R.string.month)}"
+                "$month${context.getString(R.string.month)}"
 
     private fun drawDayOfWeek(canvas: Canvas) {
         val dayOfWeekDivision = (viewWidth - viewAttrs.sidePadding * 2) / (DAYS_IN_WEEK * 2)
@@ -215,26 +216,14 @@ class MonthView(
         }
     }
 
-    private fun getCalendarWithoutTime(date: CalendarDate): Calendar {
-        val calendar = Calendar.getInstance()
-        calendar.set(date.year, date.month, date.day)
-
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-
-        return calendar
-    }
-
     private fun isSelectedStartDay(date: CalendarDate): Boolean {
         val start = selectedDates?.start ?: return false
-        return getCalendarWithoutTime(date).timeInMillis == start.createCalendar().timeInMillis
+        return date.date == start.date
     }
 
     private fun isSelectedEndDay(date: CalendarDate): Boolean {
         val end = selectedDates?.end ?: return false
-        return getCalendarWithoutTime(date).timeInMillis == end.createCalendar().timeInMillis
+        return date.date == end.date
     }
 
     private fun isIncludeSelectedDay(date: CalendarDate): Boolean {
@@ -246,9 +235,9 @@ class MonthView(
             return false
         }
 
-        val startMilliSec = selectedDates?.start?.createCalendar()?.timeInMillis ?: 0
-        val endMilliSec = selectedDates?.end?.createCalendar()?.timeInMillis ?: Long.MAX_VALUE
-        val time = getCalendarWithoutTime(date).timeInMillis
+        val startMilliSec = selectedDates?.start?.date?.time ?: 0
+        val endMilliSec = selectedDates?.end?.date?.time ?: Long.MAX_VALUE
+        val time = date.date.time
         if (time in (startMilliSec + 1)..(endMilliSec - 1)) {
             return true
         }
@@ -479,28 +468,11 @@ class MonthView(
             selectedDates != null &&
             selectedDates.start != null &&
             selectedDates.end == null &&
-            checkSelectLimitDayExceed(selectLimitDay, selectedDates.start, date)
+            Utils.checkSelectLimitDayExceed(selectLimitDay, selectedDates.start, date)
         ) {
             return false
         }
         return true
-    }
-
-    private fun checkSelectLimitDayExceed(
-        limit: Int,
-        start: CalendarDate,
-        date: CalendarDate
-    ): Boolean {
-        val calendar = Calendar.getInstance()
-        calendar.set(date.year, date.month, date.day)
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-
-        val diffMilliSec = Math.abs(start.createCalendar().timeInMillis - calendar.timeInMillis)
-        val diffDay = diffMilliSec / 1000 / 60 / 60 / 24
-        return diffDay > limit
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -573,10 +545,9 @@ class MonthView(
         return offset - WEEK_START
     }
 
-
     fun setMonthParams(
         year: Int,
-        month: Int,
+        month: Int /* 1 - 12 */,
         selectedDates: SelectedDates,
         startDate: CalendarDate?,
         endDate: CalendarDate?,
@@ -599,7 +570,7 @@ class MonthView(
         this@MonthView.selectLimitDay = selectLimitDay
 
         val calendar = Calendar.getInstance()
-        calendar.set(year, month, 1)
+        calendar.set(year, month - 1, 1)
         val dayOfWeekOffset = calendar.get(Calendar.DAY_OF_WEEK)
 
         val dayCount = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
@@ -609,7 +580,7 @@ class MonthView(
             Calendar.getInstance().let {
                 CalendarDate(
                     it.get(Calendar.YEAR),
-                    it.get(Calendar.MONTH),
+                    it.get(Calendar.MONTH) + 1,
                     it.get(Calendar.DAY_OF_MONTH)
                 )
             }

@@ -18,18 +18,16 @@ class CalendarView(
 ) : RecyclerView(context, attrs, defStyleAttr) {
 
     private val calendarAdapter: CalendarViewAdapter
-    var dateSelectListener: DateSelectListener? = null
 
     private val internalDateSelectListener = object : DateSelectListener {
 
-        override fun onDateSelected(year: Int, month: Int, day: Int) {
-            dateSelectListener?.onDateSelected(year, month, day)
+        override fun onDateSelected(date: CalendarDate) {
+            dateSelectListener?.onDateSelected(date)
         }
 
         override fun onDateRangeSelected(start: CalendarDate, end: CalendarDate) {
             dateSelectListener?.onDateRangeSelected(start, end)
         }
-
 
         override fun onSelectLimitDayExceed(
             start: CalendarDate,
@@ -39,6 +37,38 @@ class CalendarView(
             dateSelectListener?.onSelectLimitDayExceed(start, end, selectLimitDay)
         }
     }
+
+    var dateSelectListener: DateSelectListener? = null
+
+    var startDate: CalendarDate?
+        get() = calendarAdapter.startDate
+        set(value) {
+            calendarAdapter.startDate = value
+        }
+
+    var endDate: CalendarDate?
+        get() = calendarAdapter.endDate
+        set(value) {
+            calendarAdapter.endDate = value
+        }
+
+    var selectLimitDay: Int?
+        get() = calendarAdapter.selectLimitDay
+        set(value) {
+            calendarAdapter.selectLimitDay = value
+        }
+
+    var todaySelected: Boolean
+        get() = calendarAdapter.todaySelected
+        set(value) {
+            calendarAdapter.todaySelected = value
+        }
+
+    var selectedDates: SelectedDates
+        get() = calendarAdapter.selectedDates
+        set(value) {
+            calendarAdapter.selectedDates = value
+        }
 
     constructor(context: Context) : this(context, null)
 
@@ -68,7 +98,10 @@ class CalendarView(
 
         layoutManager = LinearLayoutManager(context)
         adapter = calendarAdapter
+    }
 
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
         scrollInitPosition(startDate, endDate)
     }
 
@@ -76,25 +109,28 @@ class CalendarView(
         val calendar = Calendar.getInstance()
 
         val curr = calendar.time
-        val start = startDate?.createCalendar()?.time
-        val end = endDate?.createCalendar()?.time
+        val start = startDate?.date
+        val end = endDate?.date
 
-        if ((start == null || curr.after(start)) && (end == null || curr.before(end))) {
+        val position = if ((start == null || curr.after(start)) &&
+            (end == null || curr.before(end))
+        ) {
 
             val currentYear = calendar.get(Calendar.YEAR)
             val currentMonth = calendar.get(Calendar.MONTH)
 
-            val initPosition = if (startDate == null) {
-                currentYear * MONTHS_IN_YEAR + currentMonth
+            val absPosition = currentYear * MONTHS_IN_YEAR + currentMonth
+            if (startDate == null) {
+                absPosition
             } else {
-                (currentYear - startDate.year) * MONTHS_IN_YEAR -
-                        startDate.month + currentMonth
+                absPosition - (startDate.year * MONTHS_IN_YEAR + startDate.month - 1)
             }
-
-            scrollToPosition(initPosition)
         } else if (end != null && curr.after(end)) {
-            scrollToPosition(endDate.year * MONTHS_IN_YEAR + endDate.month)
+            endDate.year * MONTHS_IN_YEAR + endDate.month - 1
+        } else {
+            return
         }
+        (layoutManager as LinearLayoutManager).scrollToPositionWithOffset(position, 0)
     }
 
     private fun parseStringDate(strDate: String?): CalendarDate? =
@@ -107,7 +143,7 @@ class CalendarView(
                 calendar.time = date
                 CalendarDate(
                     calendar.get(Calendar.YEAR),
-                    calendar.get(Calendar.MONTH),
+                    calendar.get(Calendar.MONTH) + 1,
                     calendar.get(Calendar.DAY_OF_MONTH)
                 )
             } catch (e: Exception) {
@@ -234,26 +270,6 @@ class CalendarView(
             )
         }
         super.setLayoutManager(layout)
-    }
-
-    fun setStartDate(startDate: CalendarDate?) {
-        calendarAdapter.setStartDate(startDate)
-    }
-
-    fun setEndDate(endDate: CalendarDate?) {
-        calendarAdapter.setEndDate(endDate)
-    }
-
-    fun getSelectedDays(): SelectedDates? {
-        return calendarAdapter.selectedDates
-    }
-
-    fun setSelectLimitDay(dayCount: Int) {
-        calendarAdapter.setSelectLimitDay(dayCount)
-    }
-
-    fun setTodaySelected(selected: Boolean) {
-        calendarAdapter.setTodaySelected(selected)
     }
 
     companion object {
