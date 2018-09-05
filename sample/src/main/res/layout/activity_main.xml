@@ -14,9 +14,8 @@
         android:scrollbarAlwaysDrawVerticalTrack="true"
         android:layout_height="match_parent"
         app:selectLimitDay="10"
-        app:endDate="2017-6-10"
         app:todaySelected="false"
         app:sidePadding="10dp"
-        app:startDate="2017-3-10"/>
+        app:startDate="2018-01-10"/>
 
 </android.support.constraint.ConstraintLayout>

@@ -7,33 +7,96 @@ import android.view.ViewGroup
 open class CalendarViewAdapter(
     private val context: Context,
     private val dateSelectListener: DateSelectListener?,
-    private var startDate: CalendarDate?,
-    private var endDate: CalendarDate?,
-    private var selectLimitDay: Int?,
-    private var todaySelected: Boolean,
+    startDate: CalendarDate?,
+    endDate: CalendarDate?,
+    selectLimitDay: Int?,
+    todaySelected: Boolean,
     private val viewAttrs: ViewAttrs
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>(), MonthView.OnDateClickListener {
 
-    var selectedDates = SelectedDates(null, null)
+    private var _startDate: CalendarDate? = startDate
+    private var _endDate: CalendarDate? = endDate
+    private var _selectLimitDay: Int? = selectLimitDay
+    private var _todaySelected: Boolean = todaySelected
+    private var _selectedDates = SelectedDates(null, null)
 
+    var startDate: CalendarDate?
+        get() = _startDate
+        set(value) {
+            _startDate = value
+            _selectedDates = _selectedDates.copy(start = null, end = null)
+            notifyDataSetChanged()
+        }
+
+    var endDate: CalendarDate?
+        get() = _endDate
+        set(value) {
+            _endDate = value
+            _selectedDates = _selectedDates.copy(start = null, end = null)
+            notifyDataSetChanged()
+        }
+
+    var selectLimitDay: Int?
+        get() = _selectLimitDay
+        set(value) {
+            _selectLimitDay = value
+            _selectedDates = _selectedDates.copy(start = null, end = null)
+            notifyDataSetChanged()
+        }
+
+    var todaySelected: Boolean
+        get() = _todaySelected
+        set(value) {
+            _todaySelected = value
+            notifyDataSetChanged()
+        }
+
+    var selectedDates: SelectedDates
+        get() = _selectedDates
+        set(value) {
+            val start = value.start
+            val end = value.end
+            if (start != null) {
+                if (!Utils.isDateInRange(startDate, endDate, start)) {
+                    throw IllegalArgumentException("invalid start date")
+                }
+            }
+            if (end != null) {
+                if (!Utils.isDateInRange(startDate, endDate, end)) {
+                    throw IllegalArgumentException("invalid end date")
+                }
+            }
+            val limit = selectLimitDay
+            if (start != null && end != null && limit != null) {
+                if (Utils.checkSelectLimitDayExceed(limit, start, end)) {
+                    throw IllegalArgumentException("exceed select limit day count")
+                }
+            }
+            _selectedDates = value
+            notifyDataSetChanged()
+        }
 
     override fun onCreateViewHolder(viewGroup: ViewGroup, i: Int): ViewHolder {
         return ViewHolder.create(context, viewAttrs, this)
     }
 
     override fun onBindViewHolder(viewHolder: RecyclerView.ViewHolder, position: Int) {
-        val startYear: Int = startDate?.year ?: 0
-        val startMonth: Int = startDate?.month ?: 0
+        val startYear: Int = _startDate?.year ?: 0
+        val startMonth: Int = _startDate?.month?.minus(1) ?: 0
 
-        val year: Int =
-            (position / CalendarView.MONTHS_IN_YEAR) + startYear +
-                    ((startMonth + position % CalendarView.MONTHS_IN_YEAR) /
-                            CalendarView.MONTHS_IN_YEAR)
-        val month: Int = (startMonth + (position % CalendarView.MONTHS_IN_YEAR)) %
-                CalendarView.MONTHS_IN_YEAR
+        val year = (position + startMonth) / CalendarView.MONTHS_IN_YEAR + startYear
+        val month = ((startMonth + position) % CalendarView.MONTHS_IN_YEAR) + 1
         onBindViewHolder(
             viewHolder,
-            MonthData(year, month, selectedDates, startDate, endDate, selectLimitDay, todaySelected)
+            MonthData(
+                year,
+                month,
+                _selectedDates,
+                _startDate,
+                _endDate,
+                _selectLimitDay,
+                _todaySelected
+            )
         )
     }
 
@@ -42,42 +105,38 @@ open class CalendarViewAdapter(
     }
 
     override fun getItemCount(): Int {
+        val startDate = this._startDate
+        val endDate = this._endDate
         return when {
             endDate == null -> Int.MAX_VALUE
             startDate == null -> {
-                val endYear = endDate?.year
-                val endMonth = endDate?.month
+                val endYear = endDate.year
+                val endMonth = endDate.month
 
-                (endYear?.times(CalendarView.MONTHS_IN_YEAR) ?: Int.MAX_VALUE) +
-                        (endMonth?.plus(1) ?: 0)
+                endYear * CalendarView.MONTHS_IN_YEAR + endMonth - 1
             }
             else -> {
-                val diffYear = endDate?.year?.minus(startDate?.year ?: 0)
-                val diffMonth = endDate?.month?.minus(startDate?.month ?: 0)
+                val diffYear = endDate.year - startDate.year
+                val diffMonth = endDate.month - startDate.month
 
-                (diffYear?.times(CalendarView.MONTHS_IN_YEAR) ?: Int.MAX_VALUE) +
-                        (diffMonth?.plus(1) ?: 0)
+                diffYear * CalendarView.MONTHS_IN_YEAR + diffMonth + 1
             }
         }
     }
 
     override fun onDateClicked(calendarDate: CalendarDate) {
-        dateSelectListener?.onDateSelected(
-            calendarDate.year,
-            calendarDate.month + 1,
-            calendarDate.day
-        )
+        dateSelectListener?.onDateSelected(calendarDate)
 
-        val prevSelectedDays = this.selectedDates
+        val prevSelectedDays = this._selectedDates
         val changedSelectedDays = createSelectedDay(prevSelectedDays, calendarDate)
 
         if (prevSelectedDays != changedSelectedDays) {
-            this.selectedDates = changedSelectedDays
+            this._selectedDates = changedSelectedDays
 
             if (changedSelectedDays.start != null && changedSelectedDays.end != null) {
                 dateSelectListener?.onDateRangeSelected(
-                    changedSelectedDays.start.copy(month = changedSelectedDays.start.month + 1),
-                    changedSelectedDays.end.copy(month = changedSelectedDays.end.month + 1)
+                    changedSelectedDays.start,
+                    changedSelectedDays.end
                 )
             }
             notifyDataSetChanged()
@@ -92,29 +151,6 @@ open class CalendarViewAdapter(
         dateSelectListener?.onSelectLimitDayExceed(startDate, endDate, limit)
     }
 
-    fun setStartDate(date: CalendarDate?) {
-        this.startDate = date
-        selectedDates = selectedDates.copy(start = null, end = null)
-        notifyDataSetChanged()
-    }
-
-    fun setEndDate(date: CalendarDate?) {
-        this.endDate = date
-        selectedDates = selectedDates.copy(start = null, end = null)
-        notifyDataSetChanged()
-    }
-
-    fun setSelectLimitDay(days: Int?) {
-        this.selectLimitDay = days
-        selectedDates = selectedDates.copy(start = null, end = null)
-        notifyDataSetChanged()
-    }
-
-    fun setTodaySelected(selected: Boolean) {
-        this.todaySelected = selected
-        notifyDataSetChanged()
-    }
-
     private fun createSelectedDay(
         prevSelectedDate: SelectedDates,
         calendarDate: CalendarDate
@@ -123,9 +159,7 @@ open class CalendarViewAdapter(
             prevSelectedDate.start == null && prevSelectedDate.end == null ->
                 prevSelectedDate.copy(start = calendarDate)
             prevSelectedDate.start != null && prevSelectedDate.end == null ->
-                if (prevSelectedDate.start.createCalendar().timeInMillis >
-                    calendarDate.createCalendar().timeInMillis
-                ) {
+                if (prevSelectedDate.start.date.time > calendarDate.date.time) {
                     prevSelectedDate.copy(start = calendarDate, end = prevSelectedDate.start)
                 } else {
                     prevSelectedDate.copy(end = calendarDate)

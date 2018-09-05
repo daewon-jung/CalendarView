@@ -2,7 +2,7 @@ package com.daewonjung.calendarview
 
 interface DateSelectListener {
 
-    fun onDateSelected(year: Int, month: Int, day: Int)
+    fun onDateSelected(date: CalendarDate)
 
     fun onDateRangeSelected(start: CalendarDate, end: CalendarDate)
 
