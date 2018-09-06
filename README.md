@@ -11,7 +11,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.github.daewon-jung:CalendarView:1.0.3'
+    implementation 'com.github.daewon-jung:CalendarView:1.0.4'
 }
 ```
 
