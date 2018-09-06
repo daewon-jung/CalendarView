@@ -383,8 +383,8 @@ class MonthView(
         dayOfWeekPaint.getTextBounds(dayOfWeekText, 0, dayOfWeekText.length, dayOfWeekBounds)
 
         days.forEach { dayInfo ->
-            val x = dayDivision * (1 + dayInfo.dayOffset * 2) + viewAttrs.sidePadding
-            val y = yOffset + viewAttrs.dayHeight * dayInfo.weekOffset
+            val x = dayDivision * (1 + dayInfo.dayIndexInWeek * 2) + viewAttrs.sidePadding
+            val y = yOffset + viewAttrs.dayHeight * dayInfo.weekIndex
 
             drawRectBackground(
                 canvas,
@@ -392,7 +392,7 @@ class MonthView(
                 x,
                 y,
                 dayDivision,
-                dayInfo.dayOffset,
+                dayInfo.dayIndexInWeek,
                 dayOfWeekBounds
             )
             drawCircleBackground(canvas, dayInfo.state, x, y)
@@ -507,7 +507,7 @@ class MonthView(
 
         val yDay = (y - viewAttrs.monthSpacing - viewAttrs.monthHeight - viewAttrs.dayOfWeekHeight)
             .toInt() / viewAttrs.dayHeight
-        val initialDayOffset = days.firstOrNull()?.dayOffset ?: return null
+        val initialDayOffset = days.firstOrNull()?.dayIndexInWeek ?: return null
         val dayIndex = (((x - viewAttrs.sidePadding) * DAYS_IN_WEEK /
                 (width - viewAttrs.sidePadding - viewAttrs.sidePadding)).toInt() - initialDayOffset) +
                 yDay * DAYS_IN_WEEK
@@ -536,7 +536,6 @@ class MonthView(
         } else {
             dayOfWeekOffset
         }
-
         return offset - WEEK_START
     }
 
@@ -568,9 +567,6 @@ class MonthView(
         calendar.set(year, month - 1, 1)
         val dayOfWeekOffset = calendar.get(Calendar.DAY_OF_WEEK)
 
-        val dayCount = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
-        var dayOffset = getDayOffset(dayOfWeekOffset)
-        var weekOffset = 0
         val today = if (todaySelected) {
             Calendar.getInstance().let {
                 CalendarDate(
@@ -582,25 +578,21 @@ class MonthView(
         } else {
             null
         }
+        val dayCount = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
+        val dayOffset = getDayOffset(dayOfWeekOffset)
 
         days = (1..dayCount).map { day ->
             val date = CalendarDate(year, month, day)
-            val dayData = DayInfo(
+            val dayIndex = dayOffset + day - 1
+            val dayIndexInWeek = dayIndex % DAYS_IN_WEEK
+            DayInfo(
                 date,
-                getDayState(selectedDates, today, date, dayOffset),
-                dayOffset,
-                weekOffset
+                getDayState(selectedDates, today, date, dayIndexInWeek),
+                dayIndexInWeek,
+                dayIndex / DAYS_IN_WEEK
             )
-
-            ++dayOffset
-            if (dayOffset == DAYS_IN_WEEK) {
-                dayOffset = 0
-                ++weekOffset
-            }
-            return@map dayData
         }
-        weekCount = if (days.isNotEmpty()) weekOffset + 1 else 0
-
+        weekCount = Math.ceil((dayCount + dayOffset).toDouble() / DAYS_IN_WEEK).toInt()
         requestLayout()
     }
 
@@ -611,12 +603,12 @@ class MonthView(
     private data class DayInfo(
         val date: CalendarDate,
         val state: DayState,
-        val dayOffset: Int,
-        val weekOffset: Int
+        val dayIndexInWeek: Int,
+        val weekIndex: Int
     )
 
     companion object {
         private const val DAYS_IN_WEEK = 7
-        private const val WEEK_START = 1
+        private const val WEEK_START = Calendar.SUNDAY
     }
 }
