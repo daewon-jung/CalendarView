@@ -26,8 +26,6 @@ class MonthView(
         fun onSelectLimitDayExceed(startDate: CalendarDate, endDate: CalendarDate, limit: Int)
     }
 
-    private var viewWidth: Int = 0
-
     private val monthTitlePaint by lazy {
         Paint().apply {
             isFakeBoldText = false
@@ -161,7 +159,7 @@ class MonthView(
                 .toUpperCase(Locale.getDefault())
         val dayOfWeekBounds = getTextBounds(dayOfWeekText, dayOfWeekPaint)
 
-        val dayOfWeekDivision = (viewWidth - viewAttrs.sidePadding * 2) / (DAYS_IN_WEEK * 2)
+        val dayOfWeekDivision = (width - viewAttrs.sidePadding * 2) / (DAYS_IN_WEEK * 2)
         val x = (monthBounds.right - monthBounds.left) / 2 + viewAttrs.sidePadding +
                 dayOfWeekDivision - (dayOfWeekBounds.right - dayOfWeekBounds.left) / 2
         val y = viewAttrs.monthSpacing +
@@ -180,7 +178,7 @@ class MonthView(
                 "$month${context.getString(R.string.month)}"
 
     private fun drawDayOfWeek(canvas: Canvas) {
-        val dayOfWeekDivision = (viewWidth - viewAttrs.sidePadding * 2) / (DAYS_IN_WEEK * 2)
+        val dayOfWeekDivision = (width - viewAttrs.sidePadding * 2) / (DAYS_IN_WEEK * 2)
 
         val dateFormatSymbols = DateFormatSymbols()
         val dayOfWeekCalendar = Calendar.getInstance()
@@ -376,7 +374,7 @@ class MonthView(
                 viewAttrs.dayOfWeekHeight +
                 (viewAttrs.dayHeight / 2)
 
-        val dayDivision = (viewWidth - viewAttrs.sidePadding * 2) / (DAYS_IN_WEEK * 2)
+        val dayDivision = (width - viewAttrs.sidePadding * 2) / (DAYS_IN_WEEK * 2)
 
         val dayOfWeekText = DateFormatSymbols()
             .shortWeekdays[Calendar.getInstance().get(Calendar.DAY_OF_WEEK)]
@@ -482,6 +480,7 @@ class MonthView(
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
         setMeasuredDimension(
             View.MeasureSpec.getSize(widthMeasureSpec),
             viewAttrs.monthSpacing +
@@ -489,10 +488,6 @@ class MonthView(
                     viewAttrs.dayOfWeekHeight +
                     viewAttrs.dayHeight * weekCount
         )
-    }
-
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        viewWidth = w
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -506,7 +501,7 @@ class MonthView(
     }
 
     private fun getDateFromPosition(x: Float, y: Float): CalendarDate? {
-        if (x < viewAttrs.sidePadding || x > viewWidth - viewAttrs.sidePadding) {
+        if (x < viewAttrs.sidePadding || x > width - viewAttrs.sidePadding) {
             return null
         }
 
@@ -514,7 +509,7 @@ class MonthView(
             .toInt() / viewAttrs.dayHeight
         val initialDayOffset = days.firstOrNull()?.dayOffset ?: return null
         val dayIndex = (((x - viewAttrs.sidePadding) * DAYS_IN_WEEK /
-                (viewWidth - viewAttrs.sidePadding - viewAttrs.sidePadding)).toInt() - initialDayOffset) +
+                (width - viewAttrs.sidePadding - viewAttrs.sidePadding)).toInt() - initialDayOffset) +
                 yDay * DAYS_IN_WEEK
 
         return days.getOrNull(dayIndex)?.date
@@ -548,11 +543,11 @@ class MonthView(
     fun setMonthParams(
         year: Int,
         month: Int /* 1 - 12 */,
-        selectedDates: SelectedDates,
-        startDate: CalendarDate?,
-        endDate: CalendarDate?,
-        selectLimitDay: Int?,
-        todaySelected: Boolean
+        selectedDates: SelectedDates = SelectedDates(null, null),
+        startDate: CalendarDate? = null,
+        endDate: CalendarDate? = null,
+        selectLimitDay: Int? = null,
+        todaySelected: Boolean = true
     ) {
         if (selectLimitDay != null &&
             selectedDates.start != null &&
@@ -606,7 +601,7 @@ class MonthView(
         }
         weekCount = if (days.isNotEmpty()) weekOffset + 1 else 0
 
-        invalidate()
+        requestLayout()
     }
 
     fun setOnDateClickListener(onDateClickListener: MonthView.OnDateClickListener) {

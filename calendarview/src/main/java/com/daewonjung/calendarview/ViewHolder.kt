@@ -2,6 +2,8 @@ package com.daewonjung.calendarview
 
 import android.content.Context
 import android.support.v7.widget.RecyclerView
+import android.view.ViewGroup
+
 
 class ViewHolder(
     private val monthView: MonthView
@@ -29,6 +31,10 @@ class ViewHolder(
             onDateClickListener: MonthView.OnDateClickListener
         ): ViewHolder =
             ViewHolder(MonthView(context, viewAttrs).apply {
+                layoutParams = RecyclerView.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
                 setOnDateClickListener(onDateClickListener)
             })
     }
