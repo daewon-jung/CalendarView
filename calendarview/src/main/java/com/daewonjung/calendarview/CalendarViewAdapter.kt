@@ -125,20 +125,15 @@ open class CalendarViewAdapter(
     }
 
     override fun onDateClicked(calendarDate: CalendarDate) {
-        dateSelectListener?.onDateSelected(calendarDate)
-
         val prevSelectedDays = this._selectedDates
         val changedSelectedDays = createSelectedDay(prevSelectedDays, calendarDate)
 
         if (prevSelectedDays != changedSelectedDays) {
             this._selectedDates = changedSelectedDays
-
-            if (changedSelectedDays.start != null && changedSelectedDays.end != null) {
-                dateSelectListener?.onDateRangeSelected(
-                    changedSelectedDays.start,
-                    changedSelectedDays.end
-                )
-            }
+            dateSelectListener?.onSelectedDatesChanged(
+                changedSelectedDays.start,
+                changedSelectedDays.end
+            )
             notifyDataSetChanged()
         }
     }

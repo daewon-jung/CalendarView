@@ -21,12 +21,8 @@ class CalendarView(
 
     private val internalDateSelectListener = object : DateSelectListener {
 
-        override fun onDateSelected(date: CalendarDate) {
-            dateSelectListener?.onDateSelected(date)
-        }
-
-        override fun onDateRangeSelected(start: CalendarDate, end: CalendarDate) {
-            dateSelectListener?.onDateRangeSelected(start, end)
+        override fun onSelectedDatesChanged(start: CalendarDate?, end: CalendarDate?) {
+            dateSelectListener?.onSelectedDatesChanged(start, end)
         }
 
         override fun onSelectLimitDayExceed(

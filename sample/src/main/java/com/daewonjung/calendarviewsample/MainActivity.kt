@@ -13,12 +13,8 @@ class MainActivity :
     AppCompatActivity(),
     DateSelectListener {
 
-    override fun onDateSelected(date: CalendarDate) {
-        Log.d(TAG, "Day Selected : ${date.year} / ${date.month} / ${date.day}")
-    }
-
-    override fun onDateRangeSelected(start: CalendarDate, end: CalendarDate) {
-        Log.d(TAG, "Day Range Selected : " + start.toString() + " --> " + end.toString())
+    override fun onSelectedDatesChanged(start: CalendarDate?, end: CalendarDate?) {
+        Log.d(TAG, "Day Range Selected : $start --> $end")
     }
 
     override fun onSelectLimitDayExceed(
