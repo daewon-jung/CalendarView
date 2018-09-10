@@ -146,6 +146,18 @@ open class CalendarViewAdapter(
         dateSelectListener?.onSelectLimitDayExceed(startDate, endDate, limit)
     }
 
+    fun getPositionOfDate(date: CalendarDate): Int? {
+        val startYear: Int = _startDate?.year ?: 0
+        val startMonth: Int = _startDate?.month?.minus(1) ?: 0
+
+        val targetYear = date.year
+        val targetMonth = date.month - 1
+        val targetTotalMonths = targetYear * CalendarView.MONTHS_IN_YEAR + targetMonth
+        val startTotalMonths = startYear * CalendarView.MONTHS_IN_YEAR + startMonth
+        val position = targetTotalMonths - startTotalMonths
+        return if (position in 0 until itemCount) position else null
+    }
+
     private fun createSelectedDay(
         prevSelectedDate: SelectedDates,
         calendarDate: CalendarDate
