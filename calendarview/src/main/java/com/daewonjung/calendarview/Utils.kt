@@ -18,7 +18,7 @@ object Utils {
         end: CalendarDate
     ): Boolean {
         val diffMilliSec = Math.abs(start.date.time - end.date.time)
-        val diffDay = diffMilliSec / 1000 / 60 / 60 / 24
+        val diffDay = diffMilliSec / 1000 / 60 / 60 / 24 + 1
         return diffDay > limit
     }
 }
