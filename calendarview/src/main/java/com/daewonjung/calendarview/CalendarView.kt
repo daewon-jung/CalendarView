@@ -19,6 +19,8 @@ class CalendarView(
 
     private val calendarAdapter: CalendarViewAdapter
 
+    private var scrollToInitialPosition = true
+
     private val internalDateSelectListener = object : DateSelectListener {
 
         override fun onSelectedDatesChanged(start: CalendarDate?, end: CalendarDate?) {
@@ -98,35 +100,36 @@ class CalendarView(
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        scrollInitPosition(startDate, endDate)
+        if (scrollToInitialPosition && scrollInitPosition()) {
+            scrollToInitialPosition = false
+        }
     }
 
-    private fun scrollInitPosition(startDate: CalendarDate?, endDate: CalendarDate?) {
+    private fun scrollInitPosition(): Boolean {
         val calendar = Calendar.getInstance()
 
-        val curr = calendar.time
-        val start = startDate?.date
-        val end = endDate?.date
+        val curr = CalendarDate.create(calendar.time)
+        val start = this.startDate
+        val end = this.endDate
 
-        val position = if ((start == null || curr.after(start)) &&
-            (end == null || curr.before(end))
-        ) {
-
-            val currentYear = calendar.get(Calendar.YEAR)
-            val currentMonth = calendar.get(Calendar.MONTH)
-
-            val absPosition = currentYear * MONTHS_IN_YEAR + currentMonth
-            if (startDate == null) {
-                absPosition
-            } else {
-                absPosition - (startDate.year * MONTHS_IN_YEAR + startDate.month - 1)
+        val date = selectedDates.start
+            ?: selectedDates.end
+            ?: when {
+                start != null && curr.date.before(start.date) -> start
+                end != null && curr.date.after(end.date) -> end
+                else -> curr
             }
-        } else if (end != null && curr.after(end)) {
-            endDate.year * MONTHS_IN_YEAR + endDate.month - 1
-        } else {
-            return
+        return scrollToDate(date)
+    }
+
+    fun scrollToDate(date: CalendarDate): Boolean {
+        val position = calendarAdapter.getPositionOfDate(date)
+        if (position != null) {
+            scrollToInitialPosition = false
+            (layoutManager as LinearLayoutManager).scrollToPositionWithOffset(position, 0)
+            return true
         }
-        (layoutManager as LinearLayoutManager).scrollToPositionWithOffset(position, 0)
+        return false
     }
 
     private fun parseStringDate(strDate: String?): CalendarDate? =
@@ -256,7 +259,7 @@ class CalendarView(
         super.setAdapter(adapter)
     }
 
-    override fun setLayoutManager(layout: LayoutManager?) {
+    override fun setLayoutManager(layout: RecyclerView.LayoutManager?) {
         if (layout != null &&
             (layout !is LinearLayoutManager ||
                     layout.orientation != LinearLayoutManager.VERTICAL)
