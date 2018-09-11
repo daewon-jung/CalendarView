@@ -113,7 +113,7 @@ open class CalendarViewAdapter(
                 val endYear = endDate.year
                 val endMonth = endDate.month
 
-                endYear * CalendarView.MONTHS_IN_YEAR + endMonth - 1
+                endYear * CalendarView.MONTHS_IN_YEAR + endMonth
             }
             else -> {
                 val diffYear = endDate.year - startDate.year

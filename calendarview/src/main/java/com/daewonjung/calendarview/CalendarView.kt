@@ -100,12 +100,12 @@ class CalendarView(
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        if (scrollToInitialPosition && scrollInitPosition()) {
+        if (scrollToInitialPosition && scrollToInitPosition()) {
             scrollToInitialPosition = false
         }
     }
 
-    private fun scrollInitPosition(): Boolean {
+    fun scrollToInitPosition(): Boolean {
         val calendar = Calendar.getInstance()
 
         val curr = CalendarDate.create(calendar.time)
