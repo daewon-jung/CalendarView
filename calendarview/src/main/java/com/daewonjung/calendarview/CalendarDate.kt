@@ -5,7 +5,7 @@ import java.util.*
 data class CalendarDate(
     val year: Int,
     val month: Int /* 1 - 12 */,
-    val day: Int /* 1-31 */
+    val day: Int /* 1 - 31 */
 ) {
 
     val date: Date = {
@@ -30,5 +30,4 @@ data class CalendarDate(
             )
         }
     }
-
 }

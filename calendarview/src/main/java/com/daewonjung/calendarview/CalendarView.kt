@@ -27,45 +27,78 @@ class CalendarView(
             dateSelectListener?.onSelectedDatesChanged(start, end)
         }
 
-        override fun onSelectLimitDayExceed(
+        override fun onSelectLimitExceed(
             start: CalendarDate,
             end: CalendarDate,
-            selectLimitDay: Int
+            selectType: ViewState.SelectType,
+            limit: Int
         ) {
-            dateSelectListener?.onSelectLimitDayExceed(start, end, selectLimitDay)
+            dateSelectListener?.onSelectLimitExceed(start, end, selectType, limit)
         }
     }
 
     var dateSelectListener: DateSelectListener? = null
 
-    var startDate: CalendarDate?
-        get() = calendarAdapter.startDate
+    var viewState: ViewState
+        get() = calendarAdapter.viewState
         set(value) {
-            calendarAdapter.startDate = value
+            calendarAdapter.viewState = value
+        }
+
+    var startDate: CalendarDate?
+        get() = viewState.startDate
+        set(value) {
+            viewState = viewState.copy(
+                startDate = value,
+                selectedDates = SelectedDates(null, null)
+            )
         }
 
     var endDate: CalendarDate?
-        get() = calendarAdapter.endDate
+        get() = viewState.endDate
         set(value) {
-            calendarAdapter.endDate = value
-        }
-
-    var selectLimitDay: Int?
-        get() = calendarAdapter.selectLimitDay
-        set(value) {
-            calendarAdapter.selectLimitDay = value
+            viewState = viewState.copy(
+                endDate = value,
+                selectedDates = SelectedDates(null, null)
+            )
         }
 
     var todaySelected: Boolean
-        get() = calendarAdapter.todaySelected
+        get() = viewState.todaySelected
         set(value) {
-            calendarAdapter.todaySelected = value
+            viewState = viewState.copy(todaySelected = value)
+        }
+
+    var selectType: ViewState.SelectType
+        get() = viewState.selectType
+        set(value) {
+            viewState = viewState.copy(
+                selectType = value,
+                selectedDates = SelectedDates(null, null)
+            )
         }
 
     var selectedDates: SelectedDates
-        get() = calendarAdapter.selectedDates
+        get() = viewState.selectedDates
         set(value) {
-            calendarAdapter.selectedDates = value
+            val start = value.start
+            val end = value.end
+            if (start != null) {
+                if (!Utils.isDateInRange(startDate, endDate, start)) {
+                    throw IllegalArgumentException("invalid start date")
+                }
+            }
+            if (end != null) {
+                if (!Utils.isDateInRange(startDate, endDate, end)) {
+                    throw IllegalArgumentException("invalid end date")
+                }
+            }
+            viewState = viewState.copy(selectedDates = value)
+        }
+
+    var dotList: List<Date>? = null
+        set(value) {
+            calendarAdapter.dotList = value
         }
 
     constructor(context: Context) : this(context, null)
@@ -77,26 +110,42 @@ class CalendarView(
         val typedArray = context.obtainStyledAttributes(attrs, R.styleable.CalendarView)
         val startDate = parseStringDate(typedArray.getString(R.styleable.CalendarView_startDate))
         val endDate = parseStringDate(typedArray.getString(R.styleable.CalendarView_endDate))
+        val todaySelected = typedArray.getBoolean(R.styleable.CalendarView_todaySelected, true)
+        val selectTypeAttr = typedArray.getInteger(R.styleable.CalendarView_selectType, 0)
         val selectLimitDay =
             typedArray.getInt(R.styleable.CalendarView_selectLimitDay, 0).takeIf { it > 0 }
-        val todaySelected = typedArray.getBoolean(R.styleable.CalendarView_todaySelected, true)
+        val selectLimitWeek =
+            typedArray.getInt(R.styleable.CalendarView_selectLimitWeek, 0).takeIf { it > 0 }
+        val selectLimitMonth =
+            typedArray.getInt(R.styleable.CalendarView_selectLimitMonth, 0).takeIf { it > 0 }
 
         val viewAttrs = initViewAttrs(typedArray)
         typedArray.recycle()
 
+        val selectType = when (selectTypeAttr) {
+            0 -> ViewState.SelectType.OneDay
+            1 -> ViewState.SelectType.DayRange(selectLimitDay)
+            2 -> ViewState.SelectType.WeekRange(selectLimitWeek)
+            3 -> ViewState.SelectType.MonthRange(selectLimitMonth)
+            else -> throw IllegalArgumentException("unknown selectType attribute : $selectTypeAttr")
+        }
+
         calendarAdapter = CalendarViewAdapter(
             context,
             internalDateSelectListener,
-            startDate,
-            endDate,
-            selectLimitDay,
-            todaySelected,
+            ViewState(startDate, endDate, todaySelected, selectType),
+            dotList,
             viewAttrs
         )
 
         layoutManager = LinearLayoutManager(context)
         adapter = calendarAdapter
     }
+
+    // TODO
+//    fun setDotListDelegate(delegate: (Month, (List<Date>) -> Unit) ->  Unit) {
+//
+//    }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
@@ -105,7 +154,7 @@ class CalendarView(
         }
     }
 
-    fun scrollToInitPosition(): Boolean {
+    private fun scrollToInitPosition(): Boolean {
         val calendar = Calendar.getInstance()
 
         val curr = CalendarDate.create(calendar.time)
@@ -122,7 +171,7 @@ class CalendarView(
         return scrollToDate(date)
     }
 
-    fun scrollToDate(date: CalendarDate): Boolean {
+    private fun scrollToDate(date: CalendarDate): Boolean {
         val position = calendarAdapter.getPositionOfDate(date)
         if (position != null) {
             scrollToInitialPosition = false
@@ -218,16 +267,21 @@ class CalendarView(
 
         val monthSpacing = typedArray.getDimensionPixelSize(
             R.styleable.CalendarView_monthSpacing,
-            resources.getDimensionPixelOffset(R.dimen.monthSpacing)
+            resources.getDimensionPixelSize(R.dimen.monthSpacing)
         )
         val padding = typedArray.getDimensionPixelSize(
             R.styleable.CalendarView_sidePadding,
-            resources.getDimensionPixelOffset(R.dimen.sidePadding)
+            resources.getDimensionPixelSize(R.dimen.sidePadding)
         )
 
         val selectedCircleSize = typedArray.getDimensionPixelSize(
             R.styleable.CalendarView_selectedDayRadius,
-            resources.getDimensionPixelOffset(R.dimen.selected_circle_size)
+            resources.getDimensionPixelSize(R.dimen.selected_circle_size)
+        )
+
+        val dotRadius = typedArray.getDimensionPixelSize(
+            R.styleable.CalendarView_dotRadius,
+            resources.getDimensionPixelSize(R.dimen.dot_radius)
         )
 
         return ViewAttrs(
@@ -248,7 +302,8 @@ class CalendarView(
             dayTextSize = dayTextSize,
             monthSpacing = monthSpacing,
             sidePadding = padding,
-            selectedCircleSize = selectedCircleSize
+            selectedCircleSize = selectedCircleSize,
+            dotRadius = dotRadius
         )
     }
 

@@ -14,11 +14,12 @@ class ViewHolder(
             monthView.setMonthParams(
                 year,
                 month,
-                selectedDays,
                 startDate,
                 endDate,
-                selectLimitDay,
-                todaySelected
+                todaySelected,
+                selectType,
+                selectedDates,
+                dotList
             )
         }
     }

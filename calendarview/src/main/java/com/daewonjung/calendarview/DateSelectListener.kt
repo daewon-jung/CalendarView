@@ -4,5 +4,10 @@ interface DateSelectListener {
 
     fun onSelectedDatesChanged(start: CalendarDate?, end: CalendarDate?)
 
-    fun onSelectLimitDayExceed(start: CalendarDate, end: CalendarDate, selectLimitDay: Int)
+    fun onSelectLimitExceed(
+        start: CalendarDate,
+        end: CalendarDate,
+        selectType: ViewState.SelectType,
+        limit: Int
+    )
 }

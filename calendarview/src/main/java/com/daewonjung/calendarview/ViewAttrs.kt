@@ -23,5 +23,7 @@ data class ViewAttrs(
     val sidePadding: Int = 0,
     val monthSpacing: Int = 0,
 
-    val selectedCircleSize: Int = 0
+    val selectedCircleSize: Int = 0,
+
+    val dotRadius: Int = 0
 )
