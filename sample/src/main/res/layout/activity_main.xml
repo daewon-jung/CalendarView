@@ -5,9 +5,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    tools:context="net.meshkorea.android.component.calendarsample.MainActivity">
 
-    <com.daewonjung.calendarview.CalendarView
+    <net.meshkorea.android.component.calendar.CalendarView
         android:id="@+id/calendarView"
         android:layout_width="match_parent"
         android:scrollbars="vertical"
