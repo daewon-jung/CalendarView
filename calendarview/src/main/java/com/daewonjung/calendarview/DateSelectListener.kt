@@ -1,4 +1,4 @@
-package net.meshkorea.android.component.calendar
+package com.daewonjung.calendarview
 
 interface DateSelectListener {
 
