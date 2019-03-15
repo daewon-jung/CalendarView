@@ -1,4 +1,4 @@
-package com.daewonjung.calendarviewsample
+package net.meshkorea.android.component.calendarsample
 
 import org.junit.Test
 

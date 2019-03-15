@@ -1,4 +1,4 @@
-package com.daewonjung.calendarview
+package net.meshkorea.android.component.calendar
 
 data class SelectedDates(
     val start: CalendarDate?,

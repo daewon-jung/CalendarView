@@ -1,4 +1,4 @@
-package com.daewonjung.calendarview
+package net.meshkorea.android.component.calendar
 
 data class ViewAttrs(
     val monthTextColor: Int = 0,

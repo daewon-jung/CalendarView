@@ -1,4 +1,4 @@
-package com.daewonjung.calendarview;
+package net.meshkorea.android.component.calendar;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;
