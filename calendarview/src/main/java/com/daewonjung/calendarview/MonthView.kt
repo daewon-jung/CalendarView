@@ -7,34 +7,23 @@ import android.graphics.Paint
 import android.graphics.Paint.Align
 import android.graphics.Paint.Style
 import android.graphics.Rect
-import android.graphics.Typeface
+import android.graphics.RectF
 import android.support.v4.content.ContextCompat
 import android.view.MotionEvent
 import android.view.View
 import java.text.DateFormatSymbols
+import java.text.SimpleDateFormat
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 
 @SuppressLint("ViewConstructor")
-class MonthView(
+internal class MonthView(
     context: Context,
     private val viewAttrs: ViewAttrs
 ) : View(context) {
 
-    interface OnDateClickListener {
-        fun onDateClicked(calendarDate: CalendarDate)
-        fun onSelectLimitExceed(
-            startDate: CalendarDate,
-            endDate: CalendarDate,
-            selectType: ViewState.SelectType,
-            limit: Int
-        )
-    }
-
     private val monthTitlePaint by lazy {
         Paint().apply {
-            isFakeBoldText = false
             isAntiAlias = true
             textSize = viewAttrs.monthTextSize.toFloat()
             color = viewAttrs.monthTextColor
@@ -45,7 +34,6 @@ class MonthView(
 
     private val dayOfWeekPaint by lazy {
         Paint().apply {
-            isFakeBoldText = false
             isAntiAlias = true
             textSize = viewAttrs.dayOfWeekTextSize.toFloat()
             color = viewAttrs.dayOfWeekTextColor
@@ -56,7 +44,6 @@ class MonthView(
 
     private val normalDayTextPaint by lazy {
         Paint().apply {
-            isFakeBoldText = false
             isAntiAlias = true
             textSize = viewAttrs.dayTextSize.toFloat()
             color = viewAttrs.dayTextColor
@@ -65,21 +52,8 @@ class MonthView(
         }
     }
 
-    private val todayTextPaint by lazy {
-        Paint().apply {
-            isFakeBoldText = false
-            isAntiAlias = true
-            textSize = viewAttrs.dayTextSize.toFloat()
-            color = viewAttrs.todayTextColor
-            style = Style.FILL
-            textAlign = Align.CENTER
-            typeface = Typeface.defaultFromStyle(Typeface.BOLD)
-        }
-    }
-
     private val saturdayTextPaint by lazy {
         Paint().apply {
-            isFakeBoldText = false
             isAntiAlias = true
             textSize = viewAttrs.dayTextSize.toFloat()
             color = viewAttrs.saturdayTextColor
@@ -90,7 +64,6 @@ class MonthView(
 
     private val sundayTextPaint by lazy {
         Paint().apply {
-            isFakeBoldText = false
             isAntiAlias = true
             textSize = viewAttrs.dayTextSize.toFloat()
             color = viewAttrs.sundayTextColor
@@ -101,7 +74,6 @@ class MonthView(
 
     private val disabledDayTextPaint by lazy {
         Paint().apply {
-            isFakeBoldText = false
             isAntiAlias = true
             textSize = viewAttrs.dayTextSize.toFloat()
             color = viewAttrs.disabledDayColor
@@ -112,7 +84,6 @@ class MonthView(
 
     private val selectedDayTextPaint by lazy {
         Paint().apply {
-            isFakeBoldText = false
             isAntiAlias = true
             textSize = viewAttrs.dayTextSize.toFloat()
             color = viewAttrs.selectedDayTextColor
@@ -123,33 +94,47 @@ class MonthView(
 
     private val selectedBackgroundPaint by lazy {
         Paint().apply {
-            isFakeBoldText = false
             isAntiAlias = true
             color = viewAttrs.selectedDayBgColor
             style = Style.FILL
-            textAlign = Align.CENTER
+        }
+    }
+
+    private val todaySelectedCirclePaint by lazy {
+        Paint().apply {
+            isAntiAlias = true
+            color = ContextCompat.getColor(context, R.color.white)
+            style = Style.STROKE
+            strokeWidth = 2f
+        }
+    }
+
+    private val todayNotSelectedCirclePaint by lazy {
+        Paint().apply {
+            isAntiAlias = true
+            color = viewAttrs.selectedDayBgColor
+            style = Style.STROKE
+            strokeWidth = 2f
         }
     }
 
     private val dotSelectedPaint by lazy {
         Paint().apply {
-            isFakeBoldText = false
             isAntiAlias = true
             color = ContextCompat.getColor(context, R.color.white)
             style = Style.FILL
-            textAlign = Align.CENTER
         }
     }
 
     private val dotNotSelectedPaint by lazy {
         Paint().apply {
-            isFakeBoldText = false
             isAntiAlias = true
             color = viewAttrs.selectedDayBgColor
             style = Style.FILL
-            textAlign = Align.CENTER
         }
     }
+
+    private val dateFormatSymbols: DateFormatSymbols
 
     private var days: List<DayInfo> = emptyList()
 
@@ -158,15 +143,17 @@ class MonthView(
 
     private var startDate: CalendarDate? = null
     private var endDate: CalendarDate? = null
-    private var selectType: ViewState.SelectType = ViewState.SelectType.OneDay
+    private var selectType: SelectType = SelectType.OneDay
     private var selectedDates: SelectedDates? = null
+    private var dotDayList: MutableList<Int>? = null
 
     private var weekCount = 0
-    private var onDateClickListener: OnDateClickListener? = null
+    internal var onDateClickListener: OnInternalDateSelectedListener? = null
 
     init {
         isClickable = true
         isSaveEnabled = false
+        dateFormatSymbols = DateFormatSymbols()
     }
 
     private fun getTextBounds(text: String, paint: Paint): Rect {
@@ -187,9 +174,9 @@ class MonthView(
         val monthText = getMonthAndYearString(year, month)
         val monthBounds = getTextBounds(monthText, monthTitlePaint)
 
-        val dayOfWeekText =
-            DateFormatSymbols().shortWeekdays[Calendar.getInstance().get(Calendar.DAY_OF_WEEK)]
-                .toUpperCase(Locale.getDefault())
+        val dayOfWeekText = dateFormatSymbols
+            .shortWeekdays[Calendar.getInstance().get(Calendar.DAY_OF_WEEK)]
+            .toUpperCase(Locale.getDefault())
         val dayOfWeekBounds = getTextBounds(dayOfWeekText, dayOfWeekPaint)
 
         val dayOfWeekDivision = (width - viewAttrs.sidePadding * 2) / (DAYS_IN_WEEK * 2)
@@ -206,8 +193,14 @@ class MonthView(
         )
     }
 
-    private fun getMonthAndYearString(year: Int, month: Int): String =
-        "$year${context.getString(R.string.year)} " + "$month${context.getString(R.string.month)}"
+    private fun getMonthAndYearString(year: Int, month: Int): String {
+        val date = Calendar.getInstance().apply {
+            set(year, month - 1, 1)
+        }.time
+
+        val dateFormat = SimpleDateFormat(viewAttrs.titleDateFormat, Locale.getDefault())
+        return dateFormat.format(date)
+    }
 
 
     /*****
@@ -219,7 +212,6 @@ class MonthView(
     private fun drawDayOfWeek(canvas: Canvas) {
         val dayOfWeekDivision = (width - viewAttrs.sidePadding * 2) / (DAYS_IN_WEEK * 2)
 
-        val dateFormatSymbols = DateFormatSymbols()
         val dayOfWeekCalendar = Calendar.getInstance()
 
         for (i in 0 until DAYS_IN_WEEK) {
@@ -238,15 +230,11 @@ class MonthView(
                     (viewAttrs.dayOfWeekHeight / 2) +
                     (bounds.bottom - bounds.top) / 2
 
-            val dayState = getWeekendDayState(i)
-            val textPaint: Paint = if (dayState is DayState.NotSelected) {
-                when (dayState.dayType) {
-                    DayState.DayType.SUNDAY -> sundayTextPaint
-                    DayState.DayType.SATURDAY -> saturdayTextPaint
-                    else -> normalDayTextPaint
-                }
-            } else {
-                throw IllegalStateException("only possible NotSelected DayState in day of week ")
+            val dayType = getDayType(i)
+            val textPaint: Paint = when (dayType) {
+                DayState.DayType.SUNDAY -> sundayTextPaint
+                DayState.DayType.SATURDAY -> saturdayTextPaint
+                else -> normalDayTextPaint
             }
 
             canvas.drawText(
@@ -272,7 +260,7 @@ class MonthView(
 
         val dayDivision = (width - viewAttrs.sidePadding * 2) / (DAYS_IN_WEEK * 2)
 
-        val dayOfWeekText = DateFormatSymbols()
+        val dayOfWeekText = dateFormatSymbols
             .shortWeekdays[Calendar.getInstance().get(Calendar.DAY_OF_WEEK)]
             .toUpperCase(Locale.getDefault())
         val dayOfWeekBounds = Rect()
@@ -297,12 +285,11 @@ class MonthView(
                     textPaint = selectedDayTextPaint
                 }
                 is DayState.Disabled -> textPaint = disabledDayTextPaint
-                is DayState.NotSelected -> {
+                is DayState.Normal -> {
                     textPaint = when (dayInfo.state.dayType) {
                         DayState.DayType.SUNDAY -> sundayTextPaint
                         DayState.DayType.WEEKDAY -> normalDayTextPaint
                         DayState.DayType.SATURDAY -> saturdayTextPaint
-                        DayState.DayType.TODAY -> todayTextPaint
                     }
                 }
             }
@@ -311,6 +298,7 @@ class MonthView(
             val bounds = getTextBounds(dayText, textPaint)
             drawDayText(canvas, centerX, centerY, bounds, dayText, textPaint)
             drawDayDot(canvas, centerX, centerY, bounds, dayInfo.state)
+            drawToday(canvas, centerX, centerY, dayInfo.state)
         }
     }
 
@@ -339,7 +327,7 @@ class MonthView(
     ) {
         val dot = when (dayState) {
             is DayState.Selected -> dayState.dot
-            is DayState.NotSelected -> dayState.dot
+            is DayState.Normal -> dayState.dot
             else -> false
         }
 
@@ -355,6 +343,28 @@ class MonthView(
                 ((centerY + (bounds.bottom - bounds.top) / 2) +
                         (viewAttrs.dotRadius * 3)).toFloat(),
                 viewAttrs.dotRadius.toFloat(),
+                paint
+            )
+        }
+    }
+
+    private fun drawToday(
+        canvas: Canvas,
+        centerX: Int,
+        centerY: Int,
+        dayState: DayState
+    ) {
+        if (dayState.today) {
+            val paint = if (dayState is DayState.Selected) {
+                todaySelectedCirclePaint
+            } else {
+                todayNotSelectedCirclePaint
+            }
+
+            canvas.drawCircle(
+                centerX.toFloat(),
+                centerY.toFloat(),
+                viewAttrs.selectedCircleSize.toFloat() - 3,
                 paint
             )
         }
@@ -458,8 +468,32 @@ class MonthView(
         y: Int
     ) {
         when (dayState.range) {
-            DayState.Range.START,
-            DayState.Range.END,
+            DayState.Range.START ->
+                canvas.drawArc(
+                    RectF(
+                        (x - viewAttrs.selectedCircleSize).toFloat(),
+                        (y - viewAttrs.selectedCircleSize).toFloat(),
+                        (x + viewAttrs.selectedCircleSize).toFloat(),
+                        (y + viewAttrs.selectedCircleSize).toFloat()
+                    ),
+                    90f,
+                    180f,
+                    true,
+                    selectedBackgroundPaint
+                )
+            DayState.Range.END ->
+                canvas.drawArc(
+                    RectF(
+                        (x - viewAttrs.selectedCircleSize).toFloat(),
+                        (y - viewAttrs.selectedCircleSize).toFloat(),
+                        (x + viewAttrs.selectedCircleSize).toFloat(),
+                        (y + viewAttrs.selectedCircleSize).toFloat()
+                    ),
+                    270f,
+                    180f,
+                    true,
+                    selectedBackgroundPaint
+                )
             DayState.Range.ONE_DAY ->
                 canvas.drawCircle(
                     x.toFloat(),
@@ -500,98 +534,87 @@ class MonthView(
         selectedDates: SelectedDates?,
         today: CalendarDate?,
         dayOffset: Int,
-        selectType: ViewState.SelectType,
-        dotList: List<Date>?
+        selectType: SelectType
     ): DayState {
-        val dot = dotList?.contains(date.date) ?: false
-        return when {
-            !isSelectableDate(date) -> DayState.Disabled
-            selectedDates?.start == null && selectedDates?.end == null ->
-                getDayStateNotSelected(today, date, dayOffset, dot)
-            selectedDates.start != null && selectedDates.end == null ->
-                when (selectType) {
-                    is ViewState.SelectType.OneDay ->
-                        throw IllegalStateException(
-                            "Not allowed selectedDates state in SelectType OneDay"
-                        )
-                    is ViewState.SelectType.DayRange -> {
-                        if (isSelectedStartDay(date)) {
-                            DayState.Selected(DayState.Range.ONE_DAY, dot)
-                        } else {
-                            getDayStateNotSelected(today, date, dayOffset, dot)
-                        }
-                    }
-                    is ViewState.SelectType.WeekRange -> {
-                        val min = selectedDates.start.date
-                        val calendar = Calendar.getInstance()
-                        calendar.time = min
-                        calendar.add(Calendar.DAY_OF_MONTH, 6)
-                        calendar.set(Calendar.HOUR_OF_DAY, 0)
-                        calendar.set(Calendar.MINUTE, 0)
-                        calendar.set(Calendar.SECOND, 0)
-                        calendar.set(Calendar.MILLISECOND, 0)
+        val dayType = getDayType(dayOffset)
+        val isToday = today == date
+        val hasDot = hasDot(date)
 
-                        val max = calendar.time
-                        when {
-                            date.date == min -> DayState.Selected(DayState.Range.START, dot)
-                            date.date == max -> DayState.Selected(DayState.Range.END, dot)
-                            date.date.after(min) && date.date.before(max) -> DayState.Selected(
-                                DayState.Range.MIDDLE,
-                                dot
-                            )
-                            else -> getDayStateNotSelected(today, date, dayOffset, dot)
-                        }
-                    }
-                    is ViewState.SelectType.MonthRange -> {
-                        val min = selectedDates.start.date
-                        val calendar = Calendar.getInstance()
-                        calendar.time = min
-                        val lastDay = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
-                        calendar.set(Calendar.DAY_OF_MONTH, lastDay)
-                        calendar.set(Calendar.HOUR_OF_DAY, 0)
-                        calendar.set(Calendar.MINUTE, 0)
-                        calendar.set(Calendar.SECOND, 0)
-                        calendar.set(Calendar.MILLISECOND, 0)
+        if (!isSelectableDate(date)) {
+            return DayState.Disabled(dayType, isToday, hasDot)
+        }
 
-                        val max = calendar.time
-                        when {
-                            date.date == min -> DayState.Selected(DayState.Range.START, dot)
-                            date.date == max -> DayState.Selected(DayState.Range.END, dot)
-                            date.date.after(min) && date.date.before(max) -> DayState.Selected(
-                                DayState.Range.MIDDLE,
-                                dot
-                            )
-                            else -> getDayStateNotSelected(today, date, dayOffset, dot)
-                        }
+        val rangeStartDate = selectedDates?.start?.date
+        val rangeEndDate = selectedDates?.end?.date ?: when (selectType) {
+            is SelectType.OneDay, is SelectType.DayRange -> selectedDates?.start?.date
+            is SelectType.WeekRange -> {
+                val selectedStartDate = selectedDates?.start?.date
+                selectedStartDate?.let {
+                    val lastDateInWeek = Utils.getLastDateInWeek(selectedStartDate)
+
+                    val endDate = this.endDate
+                    if (endDate?.date != null && lastDateInWeek.after(endDate.date)) {
+                        endDate.date
+                    } else {
+                        lastDateInWeek
                     }
                 }
-            isSelectedStartDay(date) && isSelectedEndDay(date) ->
-                DayState.Selected(DayState.Range.ONE_DAY, dot)
-            isSelectedStartDay(date) -> DayState.Selected(DayState.Range.START, dot)
-            isSelectedEndDay(date) -> DayState.Selected(DayState.Range.END, dot)
-            isIncludeSelectedDay(date) -> DayState.Selected(DayState.Range.MIDDLE, dot)
-            else -> getDayStateNotSelected(today, date, dayOffset, dot)
+            }
+            is SelectType.MonthRange -> {
+                val selectedStartDate = selectedDates?.start?.date
+                selectedStartDate?.let {
+                    val lastDateInMonth = Calendar.getInstance().apply {
+                        time = selectedStartDate
+                        set(
+                            Calendar.DAY_OF_MONTH,
+                            getActualMaximum(Calendar.DAY_OF_MONTH)
+                        )
+                    }
+
+                    val endDate = this.endDate
+                    if (endDate?.date != null && lastDateInMonth.time.after(endDate.date)) {
+                        endDate.date
+                    } else {
+                        lastDateInMonth.time
+                    }
+                }
+            }
+        }
+
+        return when {
+            date.date == rangeStartDate && date.date == rangeEndDate ->
+                DayState.Selected(DayState.Range.ONE_DAY, dayType, isToday, hasDot)
+            date.date == rangeStartDate ->
+                DayState.Selected(DayState.Range.START, dayType, isToday, hasDot)
+            date.date == rangeEndDate ->
+                DayState.Selected(DayState.Range.END, dayType, isToday, hasDot)
+            rangeStartDate == null || rangeEndDate == null ->
+                DayState.Normal(dayType, isToday, hasDot)
+            date.date.after(rangeStartDate) && date.date.before(rangeEndDate) ->
+                DayState.Selected(DayState.Range.MIDDLE, dayType, isToday, hasDot)
+            else -> DayState.Normal(dayType, isToday, hasDot)
         }
     }
 
-    private fun getDayStateNotSelected(
-        today: CalendarDate?,
-        date: CalendarDate,
-        dayOffset: Int,
-        dot: Boolean
-    ): DayState =
-        if (today == date) {
-            DayState.NotSelected(DayState.DayType.TODAY, dot)
-        } else {
-            getWeekendDayState(dayOffset, dot)
+    private fun getDayType(dayOffset: Int): DayState.DayType =
+        when (dayOffset) {
+            0 -> DayState.DayType.SUNDAY
+            DAYS_IN_WEEK - 1 -> DayState.DayType.SATURDAY
+            else -> DayState.DayType.WEEKDAY
         }
 
-    private fun getWeekendDayState(dayOffset: Int, dot: Boolean = false): DayState {
-        return when (dayOffset) {
-            0 -> DayState.NotSelected(DayState.DayType.SUNDAY, dot)
-            DAYS_IN_WEEK - 1 -> DayState.NotSelected(DayState.DayType.SATURDAY, dot)
-            else -> DayState.NotSelected(DayState.DayType.WEEKDAY, dot)
+    private fun hasDot(date: CalendarDate): Boolean {
+        val dotDayList = this.dotDayList
+        dotDayList?.let {
+            it.forEach { dotDay ->
+                if (date.day == dotDay) {
+                    this.dotDayList?.remove(date.day)
+                    return true
+                }
+            }
         }
+
+        return false
     }
 
 
@@ -604,7 +627,7 @@ class MonthView(
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
         setMeasuredDimension(
-            View.MeasureSpec.getSize(widthMeasureSpec),
+            MeasureSpec.getSize(widthMeasureSpec),
             viewAttrs.monthSpacing +
                     viewAttrs.monthHeight +
                     viewAttrs.dayOfWeekHeight +
@@ -621,213 +644,159 @@ class MonthView(
 
     /*****
      *
-     * is Select (able)
+     * is Selectable
      *
      *****/
 
-    private fun isSelectedStartDay(date: CalendarDate): Boolean {
-        val start = selectedDates?.start ?: return false
-        return date.date == start.date
-    }
-
-    private fun isSelectedEndDay(date: CalendarDate): Boolean {
-        val end = selectedDates?.end ?: return false
-        return date.date == end.date
-    }
-
-    private fun isIncludeSelectedDay(date: CalendarDate): Boolean {
-        val selectedDates = this.selectedDates
-
-        if (selectedDates?.start == null || selectedDates.end == null) {
-            return false
-        }
-
-        if (isSelectedStartDay(date) || isSelectedEndDay(date)) {
-            return false
-        }
-
-        val startMilliSec = selectedDates.start.date.time
-        val endMilliSec = selectedDates.end.date.time
-        val time = date.date.time
-        if (time in (startMilliSec + 1)..(endMilliSec - 1)) {
-            return true
-        }
-
-        return false
-    }
-
     private fun isSelectableDate(date: CalendarDate): Boolean {
         val startDate = this.startDate
-        if (startDate != null &&
-            startDate.year == date.year &&
-            startDate.month == date.month &&
-            startDate.day > date.day
-        ) {
+        if (startDate?.date?.after(date.date) == true) {
             return false
         }
 
         val endDate = this.endDate
-        if (endDate != null &&
-            endDate.year == date.year &&
-            endDate.month == date.month &&
-            endDate.day < date.day
-        ) {
+        if (endDate?.date?.before(date.date) == true) {
             return false
         }
 
         val selectType = this.selectType
         val selectedDates = this.selectedDates
-        if (selectedDates?.start != null &&
-            selectedDates.end == null
-        ) {
+        if (selectedDates?.start != null && selectedDates.end == null) {
             when (selectType) {
-                is ViewState.SelectType.OneDay ->
+                is SelectType.OneDay ->
                     throw IllegalStateException(
                         "Not allowed selectedDates state in SelectType OneDay"
                     )
-                is ViewState.SelectType.DayRange ->
+                is SelectType.DayRange ->
                     if (selectType.selectLimitDay != null) {
-                        return !Utils.checkSelectLimitDayExceed(
-                            selectType.selectLimitDay,
+                        return isSelectableDayRange(
                             selectedDates.start,
-                            date
+                            date,
+                            selectType.selectLimitDay
                         )
                     }
-                is ViewState.SelectType.WeekRange ->
+                is SelectType.WeekRange ->
                     if (selectType.selectLimitWeek != null) {
-                        return isSelectableWeekRange(date, selectType.selectLimitWeek)
+                        return isSelectableWeekRange(
+                            selectedDates.start,
+                            date,
+                            selectType.selectLimitWeek
+                        )
                     }
-                is ViewState.SelectType.MonthRange ->
+                is SelectType.MonthRange ->
                     if (selectType.selectLimitMonth != null) {
-                        return isSelectableMonthRange(date, selectType.selectLimitMonth)
+                        return isSelectableMonthRange(
+                            selectedDates.start,
+                            date,
+                            selectType.selectLimitMonth
+                        )
                     }
             }
         }
-        return true
-    }
-
-    private fun isSelectableWeekRange(date: CalendarDate, selectLimitWeek: Int): Boolean {
-        val selectedDates = this.selectedDates
-
-        if (selectedDates?.start == null) {
-            return true
-        }
-
-        val calendar = Calendar.getInstance()
-        calendar.time = selectedDates.start.date
-        calendar.add(Calendar.WEEK_OF_YEAR, (selectLimitWeek - 1) * -1)
-        var difference = if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
-            -6
-        } else {
-            Calendar.MONDAY - calendar.get(Calendar.DAY_OF_WEEK)
-        }
-        calendar.add(Calendar.DAY_OF_MONTH, difference)
-
-        if (date.date.before(calendar.time)) {
-            return false
-        }
-
-        calendar.time = selectedDates.start.date
-        calendar.add(Calendar.WEEK_OF_YEAR, (selectLimitWeek - 1))
-        difference = if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
-            0
-        } else {
-            Calendar.SATURDAY - calendar.get(Calendar.DAY_OF_WEEK) + 1
-        }
-        calendar.add(Calendar.DAY_OF_MONTH, difference)
-
-        if (date.date.after(calendar.time)) {
-            return false
-        }
 
         return true
     }
 
-    private fun isSelectableMonthRange(date: CalendarDate, selectLimitMonth: Int): Boolean {
-        val selectedDates = this.selectedDates
+    private fun isSelectableDayRange(
+        startDate: CalendarDate,
+        date: CalendarDate,
+        selectLimitDay: Int
+    ): Boolean {
+        val diffMilliSec = Math.abs(startDate.date.time - date.date.time)
+        val diffDay = diffMilliSec / 1000 / 60 / 60 / 24 + 1
+        return diffDay <= selectLimitDay
+    }
 
-        if (selectedDates?.start == null) {
-            return true
+    private fun isSelectableWeekRange(
+        startDate: CalendarDate,
+        date: CalendarDate,
+        selectLimitWeek: Int
+    ): Boolean {
+        val selectableFirstWeek = Calendar.getInstance().apply {
+            time = startDate.date
+            add(Calendar.WEEK_OF_YEAR, (selectLimitWeek - 1) * -1)
         }
 
-        val calendar = Calendar.getInstance()
-        calendar.time = selectedDates.start.date
-        calendar.add(Calendar.MONTH, (selectLimitMonth - 1) * -1)
-        calendar.set(Calendar.DAY_OF_MONTH, 1)
-
-        if (date.date.before(calendar.time)) {
+        if (date.date.before(Utils.getFirstDateInWeek(selectableFirstWeek.time))) {
             return false
         }
 
-        calendar.time = selectedDates.start.date
-        calendar.add(Calendar.MONTH, (selectLimitMonth - 1))
-        calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH))
+        val selectableLastWeek = Calendar.getInstance().apply {
+            time = startDate.date
+            add(Calendar.WEEK_OF_YEAR, (selectLimitWeek - 1))
+        }
 
-        if (date.date.after(calendar.time)) {
+        if (date.date.after(Utils.getLastDateInWeek(selectableLastWeek.time))) {
             return false
         }
 
         return true
     }
 
-    private fun isAvailableSelectedDates(
-        selectType: ViewState.SelectType,
+    private fun isSelectableMonthRange(
+        startDate: CalendarDate,
+        date: CalendarDate,
+        selectLimitMonth: Int
+    ): Boolean {
+        val selectableFirstDate = Calendar.getInstance().apply {
+            time = startDate.date
+            add(Calendar.MONTH, (selectLimitMonth - 1) * -1)
+            set(Calendar.DAY_OF_MONTH, 1)
+        }
+
+        if (date.date.before(selectableFirstDate.time)) {
+            return false
+        }
+
+        val selectableLastDate = Calendar.getInstance().apply {
+            time = startDate.date
+            add(Calendar.MONTH, (selectLimitMonth - 1))
+            set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
+        }
+
+        if (date.date.after(selectableLastDate.time)) {
+            return false
+        }
+
+        return true
+    }
+
+    private fun validationSelectedDates(
         selectedStartDate: CalendarDate,
-        selectedEndDate: CalendarDate
+        selectedEndDate: CalendarDate,
+        selectType: SelectType
     ): Boolean {
         when (selectType) {
-            is ViewState.SelectType.OneDay -> Unit
-            is ViewState.SelectType.DayRange ->
+            is SelectType.OneDay -> Unit
+            is SelectType.DayRange ->
                 if (selectType.selectLimitDay != null &&
-                    Utils.checkSelectLimitDayExceed(
-                        selectType.selectLimitDay,
+                    !isSelectableDayRange(
                         selectedStartDate,
-                        selectedEndDate
+                        selectedEndDate,
+                        selectType.selectLimitDay
                     )
                 ) {
                     return false
                 }
-            is ViewState.SelectType.WeekRange ->
-                if (selectType.selectLimitWeek != null) {
-                    val diffDay = if (selectedStartDate.date.before(selectedEndDate.date)) {
-                        TimeUnit.MILLISECONDS.toDays(
-                            Math.abs(selectedEndDate.date.time - selectedStartDate.date.time)
-                        )
-                    } else {
-                        val calendar = Calendar.getInstance()
-                        calendar.time = selectedStartDate.date
-                        calendar.add(Calendar.DAY_OF_MONTH, 6)
-                        TimeUnit.MILLISECONDS.toDays(
-                            Math.abs(selectedEndDate.date.time - calendar.time.time)
-                        )
-                    }
-
-                    if (diffDay >= selectType.selectLimitWeek * 7) {
-                        return false
-                    }
+            is SelectType.WeekRange ->
+                if (selectType.selectLimitWeek != null &&
+                    !isSelectableWeekRange(
+                        selectedStartDate,
+                        selectedEndDate,
+                        selectType.selectLimitWeek
+                    )
+                ) {
+                    return false
                 }
-            is ViewState.SelectType.MonthRange ->
-                if (selectType.selectLimitMonth != null) {
-                    val startCalendar = Calendar.getInstance()
-                    val endCalendar = Calendar.getInstance()
-
-                    if (selectedStartDate.date.before(selectedEndDate.date)) {
-                        startCalendar.time = selectedStartDate.date
-                        endCalendar.time = selectedEndDate.date
-                    } else {
-                        startCalendar.time = selectedEndDate.date
-                        endCalendar.time = selectedStartDate.date
-                    }
-
-                    val diffYear = endCalendar.get(Calendar.YEAR) -
-                            startCalendar.get(Calendar.YEAR)
-                    val diffMonth = diffYear * 12 +
-                            endCalendar.get(Calendar.MONTH) -
-                            startCalendar.get(Calendar.MONTH)
-
-                    if (diffMonth >= selectType.selectLimitMonth) {
-                        return false
-                    }
+            is SelectType.MonthRange ->
+                if (selectType.selectLimitMonth != null &&
+                    !isSelectableMonthRange(
+                        selectedStartDate,
+                        selectedEndDate,
+                        selectType.selectLimitMonth
+                    )
+                ) {
+                    return false
                 }
         }
 
@@ -860,29 +829,49 @@ class MonthView(
             .toInt() / viewAttrs.dayHeight
         val initialDayOffset = days.firstOrNull()?.dayIndexInWeek ?: return null
         val dayIndex = (((x - viewAttrs.sidePadding) * DAYS_IN_WEEK /
-                (width - viewAttrs.sidePadding - viewAttrs.sidePadding)).toInt() -
+                (width - viewAttrs.sidePadding * 2)).toInt() -
                 initialDayOffset) + yDay * DAYS_IN_WEEK
 
         return days.getOrNull(dayIndex)?.date
     }
 
     private fun onDateClick(clickedDate: CalendarDate) {
+        val startDate = this.startDate
+        val endDate = this.endDate
         val selectedDates = this.selectedDates
+        val selectType = this.selectType
 
         if (isSelectableDate(clickedDate)) {
-            onDateClickListener?.onDateClicked(clickedDate)
-        } else if (selectedDates?.start != null && selectedDates.end == null) {
-            val selectType = this.selectType
+            onDateClickListener?.onDateClicked(clickedDate, selectType)
 
-            if (!isAvailableSelectedDates(selectType, selectedDates.start, clickedDate)) {
+        } else if (startDate?.date?.after(clickedDate.date) == true) {
+            onDateClickListener?.onSelectedBeforeStartDate(startDate, clickedDate)
+
+        } else if (endDate?.date?.before(clickedDate.date) == true) {
+            onDateClickListener?.onSelectedAfterEndDate(endDate, clickedDate)
+
+        } else if (selectedDates?.start != null && selectedDates.end == null) {
+            val clickedLastDate = when (selectType) {
+                is SelectType.OneDay -> clickedDate
+                is SelectType.DayRange -> clickedDate
+                is SelectType.WeekRange ->
+                    CalendarDate.create(Utils.getLastDateInWeek(clickedDate.date))
+                is SelectType.MonthRange ->
+                    CalendarDate.create(Calendar.getInstance().apply {
+                        time = clickedDate.date
+                        set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
+                    }.time)
+            }
+
+            if (!validationSelectedDates(selectedDates.start, clickedLastDate, selectType)) {
                 val limit = when (selectType) {
-                    is ViewState.SelectType.OneDay ->
+                    is SelectType.OneDay ->
                         throw IllegalStateException(
                             "Not allowed selectedDates state in SelectType OneDay"
                         )
-                    is ViewState.SelectType.DayRange -> selectType.selectLimitDay
-                    is ViewState.SelectType.WeekRange -> selectType.selectLimitWeek
-                    is ViewState.SelectType.MonthRange -> selectType.selectLimitMonth
+                    is SelectType.DayRange -> selectType.selectLimitDay
+                    is SelectType.WeekRange -> selectType.selectLimitWeek
+                    is SelectType.MonthRange -> selectType.selectLimitMonth
                 }
 
                 limit?.let {
@@ -910,14 +899,14 @@ class MonthView(
         startDate: CalendarDate? = null,
         endDate: CalendarDate? = null,
         todaySelected: Boolean = true,
-        selectType: ViewState.SelectType = ViewState.SelectType.OneDay,
+        selectType: SelectType = SelectType.OneDay,
         selectedDates: SelectedDates = SelectedDates(null, null),
-        dotList: List<Date>?
+        dotDayList: List<Int>?
     ) {
         if (selectedDates.start != null && selectedDates.end != null &&
-            !isAvailableSelectedDates(selectType, selectedDates.start, selectedDates.end)
+            !validationSelectedDates(selectedDates.start, selectedDates.end, selectType)
         ) {
-            throw IllegalArgumentException("exceed select limit day count")
+            throw IllegalArgumentException("exceed select limit count")
         }
 
         this@MonthView.year = year
@@ -926,6 +915,7 @@ class MonthView(
         this@MonthView.endDate = endDate
         this@MonthView.selectType = selectType
         this@MonthView.selectedDates = selectedDates
+        this@MonthView.dotDayList = dotDayList?.toMutableList()
 
         val calendar = Calendar.getInstance()
         calendar.set(year, month - 1, 1)
@@ -958,8 +948,7 @@ class MonthView(
                     selectedDates,
                     today,
                     dayIndexInWeek,
-                    selectType,
-                    dotList
+                    selectType
                 ),
                 dayIndexInWeek,
                 dayIndex / DAYS_IN_WEEK
@@ -977,11 +966,6 @@ class MonthView(
             dayOfWeekOffset
         }
         return offset - WEEK_START
-    }
-
-
-    fun setOnDateClickListener(onDateClickListener: MonthView.OnDateClickListener) {
-        this.onDateClickListener = onDateClickListener
     }
 
     private data class DayInfo(

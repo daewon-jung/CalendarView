@@ -4,8 +4,10 @@ import android.content.Context
 import android.content.res.TypedArray
 import android.support.v4.content.ContextCompat
 import android.support.v7.widget.LinearLayoutManager
+import android.support.v7.widget.LinearSmoothScroller
 import android.support.v7.widget.RecyclerView
 import android.util.AttributeSet
+import android.util.DisplayMetrics
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -21,25 +23,46 @@ class CalendarView(
 
     private var scrollToInitialPosition = true
 
-    private val internalDateSelectListener = object : DateSelectListener {
+    private val onInternalDateSelectedListener = object : OnInternalDateSelectedListener {
 
-        override fun onSelectedDatesChanged(start: CalendarDate?, end: CalendarDate?) {
-            dateSelectListener?.onSelectedDatesChanged(start, end)
+        override fun onSelectedDatesChanged(
+            start: CalendarDate?,
+            end: CalendarDate?,
+            selectType: SelectType
+        ) {
+            onDateSelectedListener?.onSelectedDatesChanged(start, end, selectType)
         }
 
         override fun onSelectLimitExceed(
-            start: CalendarDate,
-            end: CalendarDate,
-            selectType: ViewState.SelectType,
+            startDate: CalendarDate,
+            endDate: CalendarDate,
+            selectType: SelectType,
             limit: Int
         ) {
-            dateSelectListener?.onSelectLimitExceed(start, end, selectType, limit)
+            onDateSelectedListener?.onSelectLimitExceed(startDate, endDate, selectType, limit)
+        }
+
+        override fun onSelectedBeforeStartDate(
+            startDate: CalendarDate,
+            selectedDate: CalendarDate
+        ) {
+            onOutOfRangeDateSelectedListener?.onSelectedBeforeStartDate(startDate, selectedDate)
+        }
+
+        override fun onSelectedAfterEndDate(endDate: CalendarDate, selectedDate: CalendarDate) {
+            onOutOfRangeDateSelectedListener?.onSelectedAfterEndDate(endDate, selectedDate)
+        }
+
+        override fun onDateClicked(calendarDate: CalendarDate, selectType: SelectType) {
+            throw UnsupportedOperationException("Not use onDateClicked in CalendarView")
         }
     }
 
-    var dateSelectListener: DateSelectListener? = null
+    var onDateSelectedListener: OnDateSelectedListener? = null
+    var onOutOfRangeDateSelectedListener: OnOutOfRangeDateSelectedListener? = null
+    var onTodayVisibleListener: OnTodayVisibleListener? = null
 
-    var viewState: ViewState
+    private var viewState: ViewState
         get() = calendarAdapter.viewState
         set(value) {
             calendarAdapter.viewState = value
@@ -52,6 +75,7 @@ class CalendarView(
                 startDate = value,
                 selectedDates = SelectedDates(null, null)
             )
+            todayPosition = null
         }
 
     var endDate: CalendarDate?
@@ -61,6 +85,7 @@ class CalendarView(
                 endDate = value,
                 selectedDates = SelectedDates(null, null)
             )
+            todayPosition = null
         }
 
     var todaySelected: Boolean
@@ -69,7 +94,7 @@ class CalendarView(
             viewState = viewState.copy(todaySelected = value)
         }
 
-    var selectType: ViewState.SelectType
+    var selectType: SelectType
         get() = viewState.selectType
         set(value) {
             viewState = viewState.copy(
@@ -84,22 +109,22 @@ class CalendarView(
             val start = value.start
             val end = value.end
             if (start != null) {
-                if (!Utils.isDateInRange(startDate, endDate, start)) {
+                if (!isDateInRange(startDate, endDate, start)) {
                     throw IllegalArgumentException("invalid start date")
                 }
             }
             if (end != null) {
-                if (!Utils.isDateInRange(startDate, endDate, end)) {
+                if (!isDateInRange(startDate, endDate, end)) {
                     throw IllegalArgumentException("invalid end date")
                 }
             }
             viewState = viewState.copy(selectedDates = value)
         }
 
-    var dotList: List<Date>? = null
-        set(value) {
-            calendarAdapter.dotList = value
-        }
+    private var todayPosition: Int? = null
+    private val today = CalendarDate.create(Date())
+    private var visibleToday = false
+    var scrollSpeed = 10f    // milliseconds per inch
 
     constructor(context: Context) : this(context, null)
 
@@ -123,34 +148,124 @@ class CalendarView(
         typedArray.recycle()
 
         val selectType = when (selectTypeAttr) {
-            0 -> ViewState.SelectType.OneDay
-            1 -> ViewState.SelectType.DayRange(selectLimitDay)
-            2 -> ViewState.SelectType.WeekRange(selectLimitWeek)
-            3 -> ViewState.SelectType.MonthRange(selectLimitMonth)
+            SELECT_TYPE_ONE_DAY -> SelectType.OneDay
+            SELECT_TYPE_DAY_RANGE -> SelectType.DayRange(selectLimitDay)
+            SELECT_TYPE_WEEK_RANGE -> SelectType.WeekRange(selectLimitWeek)
+            SELECT_TYPE_MONTH_RANGE -> SelectType.MonthRange(selectLimitMonth)
             else -> throw IllegalArgumentException("unknown selectType attribute : $selectTypeAttr")
         }
 
         calendarAdapter = CalendarViewAdapter(
             context,
-            internalDateSelectListener,
+            onInternalDateSelectedListener,
             ViewState(startDate, endDate, todaySelected, selectType),
-            dotList,
             viewAttrs
         )
-
-        layoutManager = LinearLayoutManager(context)
         adapter = calendarAdapter
+
+        layoutManager = object : LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false) {
+
+            override fun onLayoutChildren(
+                recycler: RecyclerView.Recycler?,
+                state: RecyclerView.State
+            ) {
+                super.onLayoutChildren(recycler, state)
+                todayVisibilityCallback(
+                    findFirstVisibleItemPosition(),
+                    findLastVisibleItemPosition()
+                )
+            }
+
+            override fun smoothScrollToPosition(
+                recyclerView: RecyclerView?,
+                state: RecyclerView.State?,
+                position: Int
+            ) {
+                val smoothScroller = object : LinearSmoothScroller(context) {
+
+                    override fun calculateSpeedPerPixel(displayMetrics: DisplayMetrics): Float =
+                        scrollSpeed / displayMetrics.densityDpi
+                }
+
+                smoothScroller.targetPosition = position
+                startSmoothScroll(smoothScroller)
+            }
+        }
+
+        addOnScrollListener(object : OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                val layoutManager = layoutManager as LinearLayoutManager
+                todayVisibilityCallback(
+                    layoutManager.findFirstVisibleItemPosition(),
+                    layoutManager.findLastVisibleItemPosition()
+                )
+            }
+        })
     }
 
-    // TODO
-//    fun setDotListDelegate(delegate: (Month, (List<Date>) -> Unit) ->  Unit) {
-//
-//    }
+    fun setDotSource(
+        dotSource: (
+            year: Int,
+            successCallback: (dayListMap: Map<Int, List<Int>>) -> Unit, /* Map<Month, List<Day>> */
+            failureCallback: (Throwable) -> Unit
+        ) -> Unit
+    ) {
+        calendarAdapter.dotSource = dotSource
+    }
+
+    fun scrollToToday() {
+        val calendar = Calendar.getInstance()
+        scrollToDate(CalendarDate.create(calendar.time), true)
+    }
+
+    fun scrollToDate(date: CalendarDate, smoothScroll: Boolean = false): Boolean {
+        val position = calendarAdapter.getPositionOfDate(date)
+        if (position != null) {
+            if (smoothScroll) {
+                smoothScrollToPosition(position)
+            } else {
+                (layoutManager as LinearLayoutManager).scrollToPositionWithOffset(position, 0)
+            }
+            return true
+        }
+        return false
+    }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         if (scrollToInitialPosition && scrollToInitPosition()) {
             scrollToInitialPosition = false
+        }
+    }
+
+    private fun isDateInRange(
+        start: CalendarDate?,
+        end: CalendarDate?,
+        date: CalendarDate
+    ): Boolean {
+        if (start != null && start.date.after(date.date)) {
+            return false
+        }
+        if (end != null && end.date.before(date.date)) {
+            return false
+        }
+        return true
+    }
+
+    private fun todayVisibilityCallback(
+        firstVisibleItemPosition: Int,
+        lastVisibleItemPosition: Int
+    ) {
+        val todayPosition = todayPosition ?: calendarAdapter.getPositionOfDate(today)
+
+        if (todayPosition != null) {
+            val prevVisibleToday = visibleToday
+            visibleToday = firstVisibleItemPosition <= todayPosition &&
+                    lastVisibleItemPosition >= todayPosition
+
+            if (prevVisibleToday != visibleToday) {
+                onTodayVisibleListener?.onVisible(visibleToday)
+            }
         }
     }
 
@@ -169,16 +284,6 @@ class CalendarView(
                 else -> curr
             }
         return scrollToDate(date)
-    }
-
-    private fun scrollToDate(date: CalendarDate): Boolean {
-        val position = calendarAdapter.getPositionOfDate(date)
-        if (position != null) {
-            scrollToInitialPosition = false
-            (layoutManager as LinearLayoutManager).scrollToPositionWithOffset(position, 0)
-            return true
-        }
-        return false
     }
 
     private fun parseStringDate(strDate: String?): CalendarDate? =
@@ -267,22 +372,25 @@ class CalendarView(
 
         val monthSpacing = typedArray.getDimensionPixelSize(
             R.styleable.CalendarView_monthSpacing,
-            resources.getDimensionPixelSize(R.dimen.monthSpacing)
+            resources.getDimensionPixelSize(R.dimen.month_spacing)
         )
         val padding = typedArray.getDimensionPixelSize(
             R.styleable.CalendarView_sidePadding,
-            resources.getDimensionPixelSize(R.dimen.sidePadding)
+            resources.getDimensionPixelSize(R.dimen.side_padding)
         )
 
         val selectedCircleSize = typedArray.getDimensionPixelSize(
             R.styleable.CalendarView_selectedDayRadius,
             resources.getDimensionPixelSize(R.dimen.selected_circle_size)
         )
-
         val dotRadius = typedArray.getDimensionPixelSize(
             R.styleable.CalendarView_dotRadius,
             resources.getDimensionPixelSize(R.dimen.dot_radius)
         )
+
+        val titleDateFormat = typedArray.getString(
+            R.styleable.CalendarView_titleDateFormat
+        ) ?: context.getString(R.string.date_format)
 
         return ViewAttrs(
             monthTextColor = monthTextColor,
@@ -303,7 +411,8 @@ class CalendarView(
             monthSpacing = monthSpacing,
             sidePadding = padding,
             selectedCircleSize = selectedCircleSize,
-            dotRadius = dotRadius
+            dotRadius = dotRadius,
+            titleDateFormat = titleDateFormat
         )
     }
 
@@ -328,5 +437,9 @@ class CalendarView(
 
     companion object {
         const val MONTHS_IN_YEAR = 12
+        const val SELECT_TYPE_ONE_DAY = 0
+        const val SELECT_TYPE_DAY_RANGE = 1
+        const val SELECT_TYPE_WEEK_RANGE = 2
+        const val SELECT_TYPE_MONTH_RANGE = 3
     }
 }

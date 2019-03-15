@@ -24,6 +24,7 @@ data class ViewAttrs(
     val monthSpacing: Int = 0,
 
     val selectedCircleSize: Int = 0,
+    val dotRadius: Int = 0,
 
-    val dotRadius: Int = 0
+    val titleDateFormat: String
 )

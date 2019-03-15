@@ -2,23 +2,33 @@ package com.daewonjung.calendarview
 
 sealed class DayState {
 
-    object Disabled : DayState()
+    abstract val dayType: DayType
+    abstract val today: Boolean
+    abstract val dot: Boolean
 
-    data class NotSelected(
-        val dayType: DayType = DayType.WEEKDAY,
-        val dot: Boolean = false
+    data class Disabled(
+        override val dayType: DayType,
+        override val today: Boolean,
+        override val dot: Boolean
+    ) : DayState()
+
+    data class Normal(
+        override val dayType: DayType,
+        override val today: Boolean,
+        override val dot: Boolean
     ) : DayState()
 
     data class Selected(
-        val range: Range = Range.ONE_DAY,
-        val dot: Boolean = false
+        val range: Range,
+        override val dayType: DayType,
+        override val today: Boolean,
+        override val dot: Boolean
     ) : DayState()
 
     enum class DayType {
         SUNDAY,
         WEEKDAY,
-        SATURDAY,
-        TODAY
+        SATURDAY
     }
 
     enum class Range {

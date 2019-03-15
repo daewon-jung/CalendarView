@@ -11,6 +11,7 @@
         android:layout_width="0dp"
         android:layout_height="60dp"
         android:text="One Day"
+        android:textSize="12sp"
         app:layout_constraintEnd_toStartOf="@+id/dayRangeTypeButton"
         app:layout_constraintHorizontal_weight="1"
         app:layout_constraintStart_toStartOf="parent" />
@@ -20,6 +21,7 @@
         android:layout_width="0dp"
         android:layout_height="60dp"
         android:text="Day Range"
+        android:textSize="12sp"
         app:layout_constraintEnd_toStartOf="@+id/weekRangeTypeButton"
         app:layout_constraintHorizontal_weight="1"
         app:layout_constraintStart_toEndOf="@id/oneDayTypeButton" />
@@ -29,6 +31,7 @@
         android:layout_width="0dp"
         android:layout_height="60dp"
         android:text="Week Range"
+        android:textSize="12sp"
         app:layout_constraintEnd_toStartOf="@+id/monthRangeTypeButton"
         app:layout_constraintHorizontal_weight="1"
         app:layout_constraintStart_toEndOf="@id/dayRangeTypeButton" />
@@ -38,9 +41,20 @@
         android:layout_width="0dp"
         android:layout_height="60dp"
         android:text="Month Range"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:textSize="12sp"
+        app:layout_constraintEnd_toEndOf="@+id/todayScrollButton"
         app:layout_constraintHorizontal_weight="1"
         app:layout_constraintStart_toEndOf="@id/weekRangeTypeButton" />
+
+    <Button
+        android:id="@+id/todayScrollButton"
+        android:layout_width="0dp"
+        android:layout_height="60dp"
+        android:text="Today Scroll"
+        android:textSize="12sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_weight="1"
+        app:layout_constraintStart_toEndOf="@id/monthRangeTypeButton" />
 
     <com.daewonjung.calendarview.CalendarView
         android:id="@+id/calendarView"
@@ -48,15 +62,12 @@
         android:layout_height="0dp"
         android:scrollbarAlwaysDrawVerticalTrack="true"
         android:scrollbars="vertical"
-        app:dotRadius="2dp"
-        app:endDate="2019-8-28"
+        app:dotRadius="1.5dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/dayRangeTypeButton"
-        app:selectLimitDay="90"
         app:sidePadding="10dp"
-        app:startDate="2018-01-03"
         app:todaySelected="true" />
 
 </android.support.constraint.ConstraintLayout>
