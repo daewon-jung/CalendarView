@@ -21,10 +21,8 @@ Declaration
 ```
     <com.daewonjung.calendarview.CalendarView
         android:id="@+id/calendarView"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:scrollbarAlwaysDrawVerticalTrack="true"
-        android:scrollbars="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         app:selectType="weekRange"
         app:startDate="2018-03-05"
         app:endDate="2028-05-28"
