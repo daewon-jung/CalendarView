@@ -2,7 +2,6 @@
 
     <string name="app_name">CalendarView</string>
 
-    <string name="year">년</string>
-    <string name="month">월</string>
+    <string name="date_format">yyyy.MM</string>
 
 </resources>

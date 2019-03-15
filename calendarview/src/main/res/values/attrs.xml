@@ -24,12 +24,25 @@
         <attr name="sidePadding" format="dimension"/>
         <attr name="monthSpacing" format="dimension"/>
 
-        <attr name="selectLimitDay" format="integer" />
         <attr name="selectedDayRadius" format="dimension" />
         <attr name="todaySelected" format="boolean" />
 
         <attr name="startDate" format="string"/>
         <attr name="endDate" format="string"/>
+
+        <attr name="dotRadius" format="dimension" />
+
+        <attr name="selectType" format="enum">
+            <enum name="oneDay" value="0" />
+            <enum name="dayRange" value="1" />
+            <enum name="weekRange" value="2" />
+            <enum name="monthRange" value="3" />
+        </attr>
+        <attr name="selectLimitDay" format="integer" />
+        <attr name="selectLimitWeek" format="integer" />
+        <attr name="selectLimitMonth" format="integer" />
+
+        <attr name="titleDateFormat" format="string" />
     </declare-styleable>
 
 </resources>

@@ -1,24 +1,32 @@
 package net.meshkorea.android.component.calendar
 
+import java.util.*
+
 object Utils {
 
-    fun isDateInRange(start: CalendarDate?, end: CalendarDate?, date: CalendarDate): Boolean {
-        if (start != null && start.date.after(date.date)) {
-            return false
-        }
-        if (end != null && end.date.before(date.date)) {
-            return false
-        }
-        return true
-    }
+    fun getFirstDateInWeek(date: Date): Date =
+        Calendar.getInstance().apply {
+            time = date
+            add(
+                Calendar.DAY_OF_MONTH,
+                if (get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+                    -6
+                } else {
+                    Calendar.MONDAY - get(Calendar.DAY_OF_WEEK)
+                }
+            )
+        }.time
 
-    fun checkSelectLimitDayExceed(
-        limit: Int,
-        start: CalendarDate,
-        end: CalendarDate
-    ): Boolean {
-        val diffMilliSec = Math.abs(start.date.time - end.date.time)
-        val diffDay = diffMilliSec / 1000 / 60 / 60 / 24 + 1
-        return diffDay > limit
-    }
+    fun getLastDateInWeek(date: Date): Date =
+        Calendar.getInstance().apply {
+            time = date
+            add(
+                Calendar.DAY_OF_MONTH,
+                if (get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+                    0
+                } else {
+                    Calendar.SATURDAY - get(Calendar.DAY_OF_WEEK) + 1
+                }
+            )
+        }.time
 }

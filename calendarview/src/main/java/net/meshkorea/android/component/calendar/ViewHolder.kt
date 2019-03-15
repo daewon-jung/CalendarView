@@ -1,11 +1,11 @@
-package net.meshkorea.android.component.calendar
+package com.daewonjung.calendarview
 
 import android.content.Context
 import android.support.v7.widget.RecyclerView
 import android.view.ViewGroup
 
 
-class ViewHolder(
+internal class ViewHolder(
     private val monthView: MonthView
 ) : RecyclerView.ViewHolder(monthView) {
 
@@ -14,11 +14,12 @@ class ViewHolder(
             monthView.setMonthParams(
                 year,
                 month,
-                selectedDays,
                 startDate,
                 endDate,
-                selectLimitDay,
-                todaySelected
+                todaySelected,
+                selectType,
+                selectedDates,
+                dotDayList
             )
         }
     }
@@ -28,18 +29,14 @@ class ViewHolder(
         fun create(
             context: Context,
             viewAttrs: ViewAttrs,
-            onDateClickListener: MonthView.OnDateClickListener
+            onDateClickListener: OnInternalDateSelectedListener
         ): ViewHolder =
-            ViewHolder(
-                MonthView(
-                    context,
-                    viewAttrs
-                ).apply {
-                    layoutParams = RecyclerView.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    )
-                    setOnDateClickListener(onDateClickListener)
-                })
+            ViewHolder(MonthView(context, viewAttrs).apply {
+                layoutParams = RecyclerView.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+                this.onDateClickListener = onDateClickListener
+            })
     }
 }
